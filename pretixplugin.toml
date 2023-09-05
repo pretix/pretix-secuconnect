@@ -1,0 +1,5 @@
+[plugin]
+package = "pretix-secuconnect"
+modules = [ "pretix_secuconnect" ]
+marketplace_name = "secuconnect"
+

@@ -474,3 +474,13 @@ class SecuconnectDirectDebit(SecuconnectMethod):
     public_name = _("SEPA Direct Debit")
 
 
+class SecuconnectPrepaid(SecuconnectMethod):
+    method = "prepaid"
+    verbose_name = _("Bank transfer via Secuconnect")
+    public_name = _("Bank transfer")
+
+
+class SecuconnectSofort(SecuconnectMethod):
+    method = "sofort"
+    verbose_name = _("SOFORT via Secuconnect")
+    public_name = _("SOFORT")

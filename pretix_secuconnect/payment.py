@@ -362,7 +362,7 @@ class SecuconnectMethod(BasePaymentProvider):
     def execute_payment(self, request: HttpRequest, payment: OrderPayment):
         try:
             req = self._post(
-                "Smart/Transactions",
+                "v2/Smart/Transactions",
                 json=self._get_smart_transaction_init_body(payment),
             )
             req.raise_for_status()
@@ -413,7 +413,10 @@ class SecuconnectMethod(BasePaymentProvider):
         payment.state = OrderPayment.PAYMENT_STATE_CREATED
         payment.save()
         request.session["payment_secuconnect_order_secret"] = payment.order.secret
-        return self.redirect(request, data.get("payment_links").get())
+        print("SecuPay success...")
+        print("Response:", data)
+
+        return self.redirect(request, data.get("payment_links").get('general'))
 
     def redirect(self, request, url):
         if request.session.get("iframe_session", False) and self.method in (

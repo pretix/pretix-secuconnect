@@ -330,11 +330,43 @@ class SecuconnectMethod(BasePaymentProvider):
         )
 
     def _get_smart_transaction_init_body(self, payment):
+        try:
+            ia = payment.order.invoice_address
+        except InvoiceAddress.DoesNotExist:
+            ia = InvoiceAddress()
+
+        customer = {}
+        if ia.company:
+            customer["companyname"] = ia.company[:50]
+
+        if ia.name_parts.get("family_name"):
+            customer["surname"] = ia.name_parts.get("family_name", "")[:50]
+            customer["forename"] = ia.name_parts.get("given_name", "")[:50]
+        elif ia.name:
+            customer["surname"] = ia.name.rsplit(" ", 1)[-1][:50]
+            customer["forename"] = ia.name.rsplit(" ", 1)[0][:50]
+        elif not ia.company:
+            customer["surname"] = "Unknown"
+
+        # if ia.vat_id and ia.vat_id_validated:
+        #    customer["vatid"] = ia.vat_id
+        print("Invoice address", ia.__dict__)
+        if ia.name_parts.get("salutation"):
+            customer["salutation"] = ia.name_parts.get("salutation", "")[:10]
+        if ia.name_parts.get("title"):
+            customer["title"] = ia.name_parts.get("title", "")[:20]
+        if ia.street and ia.zipcode and ia.city and ia.country:
+            customer["address"] = {
+                "street": ia.street[:50],
+                "postal_code": ia.zipcode[:10],
+                "city": ia.city[:50],
+                "country": str(ia.country),
+            }
+
         b = {
-            "is_demo": True, # self.is_test_mode
-            "contract": {
-                "id": self.settings.contract_id
-            },
+            "is_demo": True,  # self.is_test_mode
+            "contract": {"id": self.settings.contract_id},
+            "customer": {"contact": customer},
             "intent": "sale",
             "basket": {
                 "products": [

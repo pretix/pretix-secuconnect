@@ -13,7 +13,8 @@ from django.utils.translation import gettext_lazy as _, pgettext
 
 from pretix.base.cache import ObjectRelatedCache
 from pretix.base.decimal import round_decimal
-from pretix.base.models import Event, OrderPayment, OrderRefund
+from pretix.base.forms.questions import guess_country
+from pretix.base.models import Event, InvoiceAddress, OrderPayment, OrderRefund
 from pretix.base.payment import BasePaymentProvider, PaymentException
 from pretix.base.settings import SettingsSandbox
 from pretix.multidomain.urlreverse import build_absolute_uri
@@ -240,7 +241,7 @@ class SecuconnectMethod(BasePaymentProvider):
         }
 
     def execute_refund(self, refund: OrderRefund):
-        #TODO
+        # TODO
         raise NotImplemented
 
     @property
@@ -253,7 +254,10 @@ class SecuconnectMethod(BasePaymentProvider):
 
     @property
     def is_test_mode(self):
-        return self.settings.environment == "testing" or self.settings.environment == "showcase"
+        return (
+            self.settings.environment == "testing"
+            or self.settings.environment == "showcase"
+        )
 
     @property
     def _api_base_url(self):
@@ -264,29 +268,31 @@ class SecuconnectMethod(BasePaymentProvider):
         }[self.settings.environment]
 
     def _get_auth_token(self):
-        token = self.cache.get('payment_secuconnect_auth_token')
-        print("Token from cache?",token)
+        token = self.cache.get("payment_secuconnect_auth_token")
+        print("Token from cache?", token)
         if not token:
             print("Requesting access token")
             r = requests.post(
                 "{base}/oauth/token".format(base=self._api_base_url),
                 timeout=20,
                 json={
-                    'grant_type': 'client_credentials',
-                    'client_id': self.settings.get('client_id'),
-                    'client_secret': self.settings.get('client_secret'),
-                }
+                    "grant_type": "client_credentials",
+                    "client_id": self.settings.get("client_id"),
+                    "client_secret": self.settings.get("client_secret"),
+                },
             )
             response = r.json()
-            print("Response",response)
-            token = response['access_token']
-            self.cache.set('payment_secuconnect_auth_token', token, response['expires_in'])
+            print("Response", response)
+            token = response["access_token"]
+            self.cache.set(
+                "payment_secuconnect_auth_token", token, response["expires_in"]
+            )
         return token
 
     def _post(self, endpoint, *args, **kwargs):
         r = requests.post(
             "{base}/api/{ep}".format(base=self._api_base_url, ep=endpoint),
-            headers={ 'Authorization': 'Bearer ' + self._get_auth_token() },
+            headers={"Authorization": "Bearer " + self._get_auth_token()},
             timeout=20,
             *args,
             **kwargs
@@ -296,7 +302,7 @@ class SecuconnectMethod(BasePaymentProvider):
     def _get(self, endpoint, *args, **kwargs):
         r = requests.get(
             "{base}/api/v2/{ep}".format(base=self._api_base_url, ep=endpoint),
-            headers={ 'Authorization': 'Bearer ' + self._get_auth_token() },
+            headers={"Authorization": "Bearer " + self._get_auth_token()},
             timeout=20,
             *args,
             **kwargs
@@ -318,9 +324,7 @@ class SecuconnectMethod(BasePaymentProvider):
             kwargs={
                 "order": payment.order.code,
                 "payment": payment.pk,
-                "hash": hashlib.sha1(
-                    payment.order.secret.lower().encode()
-                ).hexdigest(),
+                "hash": hashlib.sha1(payment.order.secret.lower().encode()).hexdigest(),
                 "action": status,
             },
         )
@@ -333,25 +337,28 @@ class SecuconnectMethod(BasePaymentProvider):
             },
             "intent": "sale",
             "basket": {
-                "products": [{
-                    "id": 1,
-                    "desc": "Pretix Order",
-                    "priceOne": self._decimal_to_int(payment.amount),
-                    "quantity": 1,
-                    "tax": 0
-                }]
+                "products": [
+                    {
+                        "id": 1,
+                        "desc": "Pretix Order",
+                        "priceOne": self._decimal_to_int(payment.amount),
+                        "quantity": 1,
+                        "tax": 0,
+                    }
+                ]
             },
             "basket_info": {
                 "sum": self._decimal_to_int(payment.amount),
                 "currency": self.event.currency,
             },
             "application_context": {
+                # template ID for checkout (not subscription)
                 "checkout_template": "COT_WD0DE66HN2XWJHW8JM88003YG0NEA2",
                 "return_urls": {
                     "url_success": self._return_url(payment, "success"),
                     "url_error": self._return_url(payment, "fail"),
                     "url_abort": self._return_url(payment, "abort"),
-                }
+                },
             },
             "payment_context": {
                 "auto_capture": True,

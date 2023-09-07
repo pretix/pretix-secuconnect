@@ -455,7 +455,7 @@ class SecuconnectMethod(BasePaymentProvider):
         print("SecuPay success...")
         print("Response:", data)
 
-        return self.redirect(request, data.get("payment_links").get('general'))
+        return self.redirect(request, data.get("payment_links").get(self.method))
 
     def redirect(self, request, url):
         if request.session.get("iframe_session", False) and self.method in (

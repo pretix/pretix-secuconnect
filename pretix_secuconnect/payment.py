@@ -92,7 +92,7 @@ class SecuconnectSettingsHolder(BasePaymentProvider):
                     ),
                 ),
                 (
-                    "method_prepayment",
+                    "method_prepaid",
                     forms.BooleanField(
                         label=_("Prepayment"),
                         required=False,
@@ -336,6 +336,7 @@ class SecuconnectMethod(BasePaymentProvider):
             ia = InvoiceAddress()
 
         customer = {}
+        customer["email"] = payment.order.email
         if ia.company:
             customer["companyname"] = ia.company[:50]
 
@@ -345,8 +346,9 @@ class SecuconnectMethod(BasePaymentProvider):
         elif ia.name:
             customer["surname"] = ia.name.rsplit(" ", 1)[-1][:50]
             customer["forename"] = ia.name.rsplit(" ", 1)[0][:50]
-        elif not ia.company:
-            customer["surname"] = "Unknown"
+        #elif not ia.company:
+            #customer["surname"] = "Unknown"
+            #customer["forename"] = "Unknown"
 
         # if ia.vat_id and ia.vat_id_validated:
         #    customer["vatid"] = ia.vat_id
@@ -366,7 +368,7 @@ class SecuconnectMethod(BasePaymentProvider):
         b = {
             "is_demo": True,  # self.is_test_mode
             "contract": {"id": self.settings.contract_id},
-            "customer": {"contact": customer},
+            "customer": {"contact": customer} if customer else {},
             "intent": "sale",
             "basket": {
                 "products": [

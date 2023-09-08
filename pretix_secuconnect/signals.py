@@ -9,10 +9,14 @@ def register_payment_provider(sender, **kwargs):
         SecuconnectSettingsHolder,
         SecuconnectCC,
         SecuconnectDirectDebit,
+        SecuconnectPrepaid,
+        SecuconnectSofort,
     )
 
     return [
         SecuconnectSettingsHolder,
         SecuconnectCC,
         SecuconnectDirectDebit,
+        SecuconnectPrepaid,
+        SecuconnectSofort,
     ]

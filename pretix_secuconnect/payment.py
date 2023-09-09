@@ -361,7 +361,7 @@ class SecuconnectMethod(BasePaymentProvider):
 
     def execute_payment(self, request: HttpRequest, payment: OrderPayment):
         try:
-            req = self._post(
+            req = self.client._post(
                 "v2/Smart/Transactions",
                 json=self._get_smart_transaction_init_body(payment),
             )

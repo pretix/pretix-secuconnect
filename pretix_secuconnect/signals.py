@@ -11,6 +11,11 @@ def register_payment_provider(sender, **kwargs):
         SecuconnectDirectDebit,
         SecuconnectPrepaid,
         SecuconnectSofort,
+        SecuconnectEasycredit,
+        SecuconnectEPS,
+        SecuconnectGiropay,
+        SecuconnectInvoice,
+        SecuconnectPaypal,
     )
 
     return [
@@ -19,4 +24,9 @@ def register_payment_provider(sender, **kwargs):
         SecuconnectDirectDebit,
         SecuconnectPrepaid,
         SecuconnectSofort,
+        SecuconnectEasycredit,
+        SecuconnectEPS,
+        SecuconnectGiropay,
+        SecuconnectInvoice,
+        SecuconnectPaypal,
     ]

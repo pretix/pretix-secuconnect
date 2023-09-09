@@ -1,24 +1,23 @@
 import hashlib
 import json
 import logging
-import requests
-import uuid
 from collections import OrderedDict
+
+import requests
 from django import forms
 from django.conf import settings
 from django.core import signing
 from django.http import HttpRequest
 from django.template.loader import get_template
 from django.utils.translation import gettext_lazy as _, pgettext
+from requests import HTTPError, RequestException
 
 from pretix.base.cache import ObjectRelatedCache
 from pretix.base.decimal import round_decimal
-from pretix.base.forms.questions import guess_country
 from pretix.base.models import Event, InvoiceAddress, OrderPayment, OrderRefund
 from pretix.base.payment import BasePaymentProvider, PaymentException
 from pretix.base.settings import SettingsSandbox
 from pretix.multidomain.urlreverse import build_absolute_uri
-from requests import HTTPError, RequestException
 
 logger = logging.getLogger(__name__)
 

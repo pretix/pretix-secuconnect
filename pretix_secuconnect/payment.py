@@ -140,6 +140,9 @@ class SecuconnectMethod(BasePaymentProvider):
     cancel_flow = True
     payment_methods = []
 
+    allow_business = True
+    required_customer_info = ("forename", "surname", "email",)
+
     def __init__(self, event: Event):
         super().__init__(event)
         self.settings = SettingsSandbox("payment", "secuconnect", event)
@@ -301,13 +304,16 @@ class SecuconnectMethod(BasePaymentProvider):
 
     def _get(self, endpoint, *args, **kwargs):
         r = requests.get(
-            "{base}/api/v2/{ep}".format(base=self._api_base_url, ep=endpoint),
+            "{base}/api/{ep}".format(base=self._api_base_url, ep=endpoint),
             headers={"Authorization": "Bearer " + self._get_auth_token()},
             timeout=20,
             *args,
             **kwargs
         )
         return r
+
+    def fetch_transaction_info(self, transaction_id):
+        return self._get('v2/Smart/Transactions/{}'.format(transaction_id)).json()
 
     def _amount_to_decimal(self, cents):
         places = settings.CURRENCY_PLACES.get(self.event.currency, 2)
@@ -450,7 +456,7 @@ class SecuconnectMethod(BasePaymentProvider):
             )
 
         data = req.json()
-        payment.info = json.dumps(data)
+        payment.info_data = data
         payment.state = OrderPayment.PAYMENT_STATE_CREATED
         payment.save()
         request.session["payment_secuconnect_order_secret"] = payment.order.secret
@@ -506,6 +512,8 @@ class SecuconnectDirectDebit(SecuconnectMethod):
     method = "debit"
     verbose_name = _("SEPA Direct Debit via Secuconnect")
     public_name = _("SEPA Direct Debit")
+    # required_customer_info = ("forename", "surname", "address", "email",)
+    # ...address only required if payment guarantee/scoring contracted
 
 
 class SecuconnectPrepaid(SecuconnectMethod):
@@ -518,3 +526,42 @@ class SecuconnectSofort(SecuconnectMethod):
     method = "sofort"
     verbose_name = _("SOFORT via Secuconnect")
     public_name = _("SOFORT")
+    required_customer_info = ("forename", "surname", "address", "email",)
+
+
+class SecuconnectEasycredit(SecuconnectMethod):
+    method = "easycredit"
+    verbose_name = _("easycredit via Secuconnect")
+    public_name = _("easycredit")
+    required_customer_info = ("forename", "surname", "address", "email",)
+    allow_business = False
+
+
+class SecuconnectEPS(SecuconnectMethod):
+    method = "eps"
+    verbose_name = _("EPS via Secuconnect")
+    public_name = _("EPS")
+
+
+class SecuconnectGiropay(SecuconnectMethod):
+    method = "giropay"
+    verbose_name = _("GiroPay via Secuconnect")
+    public_name = _("GiroPay")
+
+
+class SecuconnectInvoice(SecuconnectMethod):
+    method = "invoice"
+    verbose_name = _("Invoice via Secuconnect")
+    public_name = _("Invoice")
+    # required_customer_info = ("forename", "surname", "address", "email",)
+    # ...address only required if payment guarantee/scoring contracted
+
+
+class SecuconnectPaypal(SecuconnectMethod):
+    method = "paypal"
+    verbose_name = _("PayPal via Secuconnect")
+    public_name = _("PayPal")
+    # required_customer_info = ("forename", "surname", "address", "email",)
+    # ...address only required for physical shipment
+
+

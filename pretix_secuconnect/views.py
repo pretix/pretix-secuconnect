@@ -55,7 +55,7 @@ class ReturnView(SecuconnectOrderView, View):
     def get(self, request, *args, **kwargs):
         print("SecuPay return:",kwargs)
         transaction_id = self.payment.info_data['id']
-        transaction_details = self.pprov.fetch_transaction_info(transaction_id)
+        transaction_details = self.pprov.client.fetch_transaction_info(transaction_id)
         print("SecuPay transaction details:",transaction_details)
         if kwargs.get("action") == "success":
             self.payment.info_data = transaction_details

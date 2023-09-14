@@ -55,5 +55,13 @@ class SecuconnectAPIClient:
         )
         return r
 
-    def fetch_transaction_info(self, transaction_id):
+    def fetch_smart_transaction_info(self, transaction_id):
         return self._get('v2/Smart/Transactions/{}'.format(transaction_id)).json()
+
+    def fetch_payment_transaction_info(self, transaction_id):
+        return self._get('v2/Payment/Transactions/{}'.format(transaction_id)).json()
+
+
+class SmartTransaction:
+    pass
+

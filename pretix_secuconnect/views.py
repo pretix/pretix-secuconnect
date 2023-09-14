@@ -12,6 +12,7 @@ from django.views.decorators.clickjacking import xframe_options_exempt
 from django.views.decorators.csrf import csrf_exempt
 
 from pretix.base.models import Order, OrderPayment
+from pretix.base.payment import PaymentException
 from pretix.multidomain.urlreverse import eventreverse
 
 
@@ -115,4 +116,19 @@ class WebhookView(SecuconnectOrderView, View):
         print("Request body:", request.body)
         json_data = json.loads(request.body)
         print(json_data)
-        raise Http404()
+        transaction_id = self.payment.info_data["id"]
+        transaction_details = self.pprov.client.fetch_transaction_info(transaction_id)
+        print(transaction_details)
+
+        self.payment.info_data = transaction_details
+        if transaction_details['status'] == 'ok':
+            self.payment.confirm()
+        elif transaction_details['status'] == 'pending':
+            self.payment.state = OrderPayment.PAYMENT_STATE_PENDING
+            self.payment.save(update_fields=["state", "info"])
+        elif transaction_details['status'] == 'failed':
+            self.payment.fail(info=transaction_details)
+        else:
+            raise PaymentException("Unexpected payment state reported by SecuConnect: " + transaction_details['status'])
+
+        return HttpResponse("ok")

@@ -2,24 +2,26 @@ import hashlib
 import json
 
 from django.contrib import messages
-from django.http import Http404, HttpResponse
+from django.http import Http404, HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect
+from django.utils.decorators import method_decorator
 from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
 from django.views import View
 from django.views.decorators.clickjacking import xframe_options_exempt
+from django.views.decorators.csrf import csrf_exempt
 
 from pretix.base.models import Order, OrderPayment
 from pretix.multidomain.urlreverse import eventreverse
 
 
 @xframe_options_exempt
-def redirect_view(request, *args, **kwargs):
+def redirect_view(request: HttpRequest, *args, **kwargs):
     return HttpResponse("hi there")
 
 
 class SecuconnectOrderView:
-    def dispatch(self, request, *args, **kwargs):
+    def dispatch(self, request: HttpRequest, *args, **kwargs):
         try:
             self.order = request.event.orders.get(code=kwargs["order"])
             if (
@@ -52,7 +54,7 @@ class SecuconnectOrderView:
 
 
 class ReturnView(SecuconnectOrderView, View):
-    def get(self, request, *args, **kwargs):
+    def get(self, request: HttpRequest, *args, **kwargs):
         print("SecuPay return:",kwargs)
         transaction_id = self.payment.info_data['id']
         transaction_details = self.pprov.client.fetch_transaction_info(transaction_id)
@@ -106,3 +108,11 @@ class ReturnView(SecuconnectOrderView, View):
             + ("?paid=yes" if self.order.status == Order.STATUS_PAID else "")
         )
 
+
+@method_decorator(csrf_exempt, 'dispatch')
+class WebhookView(SecuconnectOrderView, View):
+    def post(self, request: HttpRequest, *args, **kwargs):
+        print("Request body:", request.body)
+        json_data = json.loads(request.body)
+        print(json_data)
+        raise Http404()

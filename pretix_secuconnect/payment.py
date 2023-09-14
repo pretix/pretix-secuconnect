@@ -1,6 +1,7 @@
 import hashlib
 import json
 import logging
+from decimal import Decimal
 from collections import OrderedDict
 
 from .api_client import SecuconnectAPIClient
@@ -14,7 +15,7 @@ from requests import HTTPError, RequestException
 
 from pretix.base.cache import ObjectRelatedCache
 from pretix.base.decimal import round_decimal
-from pretix.base.models import Event, InvoiceAddress, OrderPayment, OrderRefund
+from pretix.base.models import Event, InvoiceAddress, Order, OrderPayment, OrderRefund
 from pretix.base.payment import BasePaymentProvider, PaymentException
 from pretix.base.settings import SettingsSandbox
 from pretix.multidomain.urlreverse import build_absolute_uri
@@ -132,7 +133,6 @@ class SecuconnectSettingsHolder(BasePaymentProvider):
         return d
 
 
-
 class SecuconnectMethod(BasePaymentProvider):
     method = ""
     abort_pending_allowed = False
@@ -174,18 +174,18 @@ class SecuconnectMethod(BasePaymentProvider):
     def payment_partial_refund_supported(self, payment: OrderPayment) -> bool:
         return self.refunds_allowed
 
-    def payment_prepare(self, request, payment):
+    def payment_prepare(self, request: HttpRequest, payment: OrderPayment):
         return self.checkout_prepare(request, None)
 
     def payment_is_valid_session(self, request: HttpRequest):
         return True
 
-    def payment_form_render(self, request) -> str:
+    def payment_form_render(self, request: HttpRequest, total: Decimal, order: Order=None) -> str:
         template = get_template("pretix_secuconnect/checkout_payment_form.html")
         ctx = {"request": request, "event": self.event, "settings": self.settings}
         return template.render(ctx)
 
-    def checkout_confirm_render(self, request) -> str:
+    def checkout_confirm_render(self, request: HttpRequest, order: Order=None, info_data: dict=None) -> str:
         template = get_template("pretix_secuconnect/checkout_payment_confirm.html")
         ctx = {
             "request": request,
@@ -276,10 +276,10 @@ class SecuconnectMethod(BasePaymentProvider):
         places = settings.CURRENCY_PLACES.get(self.event.currency, 2)
         return int(amount * 10**places)
 
-    def _return_url(self, payment, status):
+    def _return_url(self, type, payment, status):
         return build_absolute_uri(
             self.event,
-            "plugins:pretix_secuconnect:return",
+            "plugins:pretix_secuconnect:" + type,
             kwargs={
                 "order": payment.order.code,
                 "payment": payment.pk,
@@ -288,14 +288,14 @@ class SecuconnectMethod(BasePaymentProvider):
             },
         )
 
-    def _get_smart_transaction_init_body(self, payment):
+    def _build_customer_info(self, order):
         try:
-            ia = payment.order.invoice_address
+            ia = order.invoice_address
         except InvoiceAddress.DoesNotExist:
             ia = InvoiceAddress()
 
         customer = {}
-        customer["email"] = payment.order.email
+        customer["email"] = order.email
         if ia.company:
             customer["companyname"] = ia.company[:50]
 
@@ -323,7 +323,10 @@ class SecuconnectMethod(BasePaymentProvider):
                 "city": ia.city[:50],
                 "country": str(ia.country),
             }
+        return customer
 
+    def _build_smart_transaction_init_body(self, payment):
+        customer = self._build_customer_info(payment.order)
         b = {
             "is_demo": True,  # self.is_test_mode
             "contract": {"id": self.settings.contract_id},
@@ -348,9 +351,10 @@ class SecuconnectMethod(BasePaymentProvider):
                 # template ID for checkout (not subscription)
                 "checkout_template": "COT_WD0DE66HN2XWJHW8JM88003YG0NEA2",
                 "return_urls": {
-                    "url_success": self._return_url(payment, "success"),
-                    "url_error": self._return_url(payment, "fail"),
-                    "url_abort": self._return_url(payment, "abort"),
+                    "url_success": self._return_url("return", payment, "success"),
+                    "url_error": self._return_url("return", payment, "fail"),
+                    "url_abort": self._return_url("return", payment, "abort"),
+                    "url_push": self._return_url("webhook", payment, "webhook"),
                 },
             },
             "payment_context": {
@@ -363,7 +367,7 @@ class SecuconnectMethod(BasePaymentProvider):
         try:
             req = self.client._post(
                 "v2/Smart/Transactions",
-                json=self._get_smart_transaction_init_body(payment),
+                json=self._build_smart_transaction_init_body(payment),
             )
             req.raise_for_status()
         except HTTPError:
@@ -373,21 +377,17 @@ class SecuconnectMethod(BasePaymentProvider):
             except:
                 info_data = {"error": True, "detail": req.text}
             payment.fail(info=info_data)
-            raise PaymentException(
-                _(
-                    "We had trouble communicating with SecuConnect. Please try again and get in touch "
-                    "with us if this problem persists."
-                )
-            )
+            raise PaymentException(_(
+                "We had trouble communicating with SecuConnect. Please try again and get in touch "
+                "with us if this problem persists."
+            ))
         except RequestException as e:
             logger.exception("SecuConnect request error")
             payment.fail(info={"error": True, "detail": str(e)})
-            raise PaymentException(
-                _(
-                    "We had trouble communicating with SecuConnect. Please try again and get in touch "
-                    "with us if this problem persists."
-                )
-            )
+            raise PaymentException(_(
+                "We had trouble communicating with SecuConnect. Please try again and get in touch "
+                "with us if this problem persists."
+            ))
 
         data = req.json()
         payment.info_data = data
@@ -399,13 +399,8 @@ class SecuconnectMethod(BasePaymentProvider):
 
         return self.redirect(request, data.get("payment_links").get(self.method))
 
-    def redirect(self, request, url):
-        if request.session.get("iframe_session", False) and self.method in (
-            "paypal",
-            "sofort",
-            "giropay",
-            "paydirekt",
-        ):
+    def redirect(self, request: HttpRequest, url):
+        if request.session.get("iframe_session", False):
             return (
                 build_absolute_uri(request.event, "plugins:pretix_secuconnect:redirect")
                 + "?data="

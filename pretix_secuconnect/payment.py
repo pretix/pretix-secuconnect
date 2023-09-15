@@ -250,8 +250,24 @@ class SecuconnectMethod(BasePaymentProvider):
         }
 
     def execute_refund(self, refund: OrderRefund):
-        # TODO
-        raise NotImplemented
+        try:
+            req = self.client._post(
+                "v2/Payment/Transactions/{}/cancel".format(refund.payment.info_data['transactions'][0]['id']),
+                json={ 'reduce_amount_by': self._decimal_to_int(refund.amount) },
+            )
+            req.raise_for_status()
+        except HTTPError:
+            logger.exception('SecuConnect error: %s' % req.text)
+            try:
+                refund.info_data = req.json()
+            except:
+                refund.info_data = {
+                    'error': True,
+                    'detail': req.text
+                }
+            raise PaymentException(_('SecuConnect reported an error: {}').format(refund.info_data.get('error_user')))
+        else:
+            refund.done()
 
     @property
     def test_mode_message(self):

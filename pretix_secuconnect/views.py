@@ -1,9 +1,11 @@
 import hashlib
 import json
+import urllib
 
 from django.contrib import messages
-from django.http import Http404, HttpRequest, HttpResponse
-from django.shortcuts import get_object_or_404, redirect
+from django.core import signing
+from django.http import Http404, HttpRequest, HttpResponse, HttpResponseBadRequest
+from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.decorators import method_decorator
 from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
@@ -13,12 +15,37 @@ from django.views.decorators.csrf import csrf_exempt
 
 from pretix.base.models import Order, OrderPayment
 from pretix.base.payment import PaymentException
-from pretix.multidomain.urlreverse import eventreverse
+from pretix.multidomain.urlreverse import build_absolute_uri, eventreverse
 
 
 @xframe_options_exempt
 def redirect_view(request: HttpRequest, *args, **kwargs):
-    return HttpResponse("hi there")
+    try:
+        data = signing.loads(request.GET.get("data", ""), salt="safe-redirect")
+    except signing.BadSignature:
+        return HttpResponseBadRequest("Invalid parameter")
+
+    if "go" in request.GET:
+        if "session" in data:
+            for k, v in data["session"].items():
+                request.session[k] = v
+        return redirect(data["url"])
+    else:
+        params = request.GET.copy()
+        params["go"] = "1"
+        r = render(
+            request,
+            "pretix_secuconnect/redirect.html",
+            {
+                "url": build_absolute_uri(
+                    request.event, "plugins:pretix_secuconnect:redirect"
+                )
+                + "?"
+                + urllib.parse.urlencode(params),
+            },
+        )
+        r._csp_ignore = True
+        return r
 
 
 class SecuconnectOrderView:

@@ -5,7 +5,7 @@
 {% load commadecimal %}
 
 {% if payment.state == "pending" %}
-    {% if payment_info.payment_instructions %}
+    {% if payment_info.smart_transaction.payment_instructions %}
 
         <p>{% blocktrans trimmed %}
             Please transfer the full amount to the following bank account:
@@ -14,12 +14,12 @@
         <div class="row">
             <div class="col-md-6 col-xs-12">
                 <p>
-                    <strong>{% trans "Account holder" %}:</strong> {{ payment_info.payment_instructions.owner }}<br>
-                    <strong>{% trans "IBAN" %}:</strong> {{ payment_info.payment_instructions.iban|ibanformat }}<br>
-                    <strong>{% trans "BIC" %}:</strong> {{ payment_info.payment_instructions.bic }}<br>
-                    <strong>{% trans "Bank name" %}:</strong> {{ payment_info.payment_instructions.bankname }}<br>
+                    <strong>{% trans "Account holder" %}:</strong> {{ payment_info.smart_transaction.payment_instructions.owner }}<br>
+                    <strong>{% trans "IBAN" %}:</strong> {{ payment_info.smart_transaction.payment_instructions.iban|ibanformat }}<br>
+                    <strong>{% trans "BIC" %}:</strong> {{ payment_info.smart_transaction.payment_instructions.bic }}<br>
+                    <strong>{% trans "Bank name" %}:</strong> {{ payment_info.smart_transaction.payment_instructions.bankname }}<br>
                     <strong>{% trans "Amount:" %}</strong> {{ payment.amount|money:event.currency }}<br/>
-                    <strong>{% trans "Reference code (important):" %} {{ payment_info.payment_instructions.purpose }}</strong>
+                    <strong>{% trans "Reference code (important):" %} {{ payment_info.smart_transaction.payment_instructions.purpose }}</strong>
                 </p>
                 <p>
                     {% trans "After you sent the bank transfer, you can close this window. We will send you an email as soon as we received your payment." %}
@@ -40,13 +40,13 @@
 002
 2
 SCT
-{{ payment_info.payment_instructions.bic }}
-{{ payment_info.payment_instructions.owner }}
-{{ payment_info.payment_instructions.iban }}
+{{ payment_info.smart_transaction.payment_instructions.bic }}
+{{ payment_info.smart_transaction.payment_instructions.owner }}
+{{ payment_info.smart_transaction.payment_instructions.iban }}
 {{ event.currency }}{{ payment.amount|dotdecimal }}
 
 
-{{ payment_info.payment_instructions.purpose }}
+{{ payment_info.smart_transaction.payment_instructions.purpose }}
 
                 </script>
                         </p>
@@ -56,8 +56,8 @@ SCT
                             {% trans "Scan the qr-code with your banking app" %}
                         </p>
                         <p>
-                            <a aria-label="{% trans "Open BezahlCode in your banking app to start the payment process." %}" href="bank://singlepaymentsepa?name={{ payment_info.payment_instructions.owner|urlencode }}&iban={{ payment_info.payment_instructions.iban }}&bic={{ payment_info.payment_instructions.bic }}&amount={{ payment.amount|commadecimal }}&reason={{ payment_info.payment_instructions.purpose }}&currency={{ event.currency }}">
-                                <script type="text/plain" data-size="150" data-replace-with-qr>bank://singlepaymentsepa?name={{ payment_info.payment_instructions.owner|urlencode }}&iban={{ payment_info.payment_instructions.iban }}&bic={{ payment_info.payment_instructions.bic }}&amount={{ payment.amount|commadecimal }}&reason={{ payment_info.payment_instructions.purpose }}&currency={{ event.currency }}</script>
+                            <a aria-label="{% trans "Open BezahlCode in your banking app to start the payment process." %}" href="bank://singlepaymentsepa?name={{ payment_info.smart_transaction.payment_instructions.owner|urlencode }}&iban={{ payment_info.smart_transaction.payment_instructions.iban }}&bic={{ payment_info.smart_transaction.payment_instructions.bic }}&amount={{ payment.amount|commadecimal }}&reason={{ payment_info.smart_transaction.payment_instructions.purpose }}&currency={{ event.currency }}">
+                                <script type="text/plain" data-size="150" data-replace-with-qr>bank://singlepaymentsepa?name={{ payment_info.smart_transaction.payment_instructions.owner|urlencode }}&iban={{ payment_info.smart_transaction.payment_instructions.iban }}&bic={{ payment_info.smart_transaction.payment_instructions.bic }}&amount={{ payment.amount|commadecimal }}&reason={{ payment_info.smart_transaction.payment_instructions.purpose }}&currency={{ event.currency }}</script>
                             </a>
                         </p>
                     </div>

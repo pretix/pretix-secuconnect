@@ -1,7 +1,9 @@
 import hashlib
 import json
+import logging
 import urllib
 
+from .api_client import PaymentStatusSimple
 from django.contrib import messages
 from django.core import signing
 from django.http import Http404, HttpRequest, HttpResponse, HttpResponseBadRequest
@@ -16,6 +18,8 @@ from django.views.decorators.csrf import csrf_exempt
 from pretix.base.models import Order, OrderPayment
 from pretix.base.payment import PaymentException
 from pretix.multidomain.urlreverse import build_absolute_uri, eventreverse
+
+logger = logging.getLogger(__name__)
 
 
 @xframe_options_exempt
@@ -50,6 +54,7 @@ def redirect_view(request: HttpRequest, *args, **kwargs):
 
 class SecuconnectOrderView:
     def dispatch(self, request: HttpRequest, *args, **kwargs):
+        print("SecuconnectOrderView",kwargs)
         try:
             self.order = request.event.orders.get(code=kwargs["order"])
             if (
@@ -84,20 +89,25 @@ class SecuconnectOrderView:
 class ReturnView(SecuconnectOrderView, View):
     def get(self, request: HttpRequest, *args, **kwargs):
         print("SecuPay return:",kwargs)
-        transaction_id = self.payment.info_data['id']
-        transaction_details = self.pprov.client.fetch_smart_transaction_info(transaction_id)
-        print("SecuPay transaction details:",transaction_details)
+        info = self.payment.info_data
+        transaction_id = info['smart_transaction']['id']
+        smart_transaction = self.pprov.client.fetch_smart_transaction_info(transaction_id)
+        print("SecuPay smart transaction details:", smart_transaction)
+        payment_transaction = self.pprov.client.fetch_payment_transaction_info(smart_transaction['transactions'][0]['id'])
+        print("SecuPay payment transaction details:", smart_transaction)
+        info['smart_transaction'] = smart_transaction
+        info['payment_transaction'] = payment_transaction
         if kwargs.get("action") == "success":
-            self.payment.info_data = transaction_details
-            if transaction_details['status'] == 'ok':
+            self.payment.info_data = info
+            if smart_transaction['status'] == 'ok':
                 self.payment.confirm()
-            elif transaction_details['status'] == 'pending':
+            elif smart_transaction['status'] == 'pending':
                 self.payment.state = OrderPayment.PAYMENT_STATE_PENDING
                 self.payment.save(update_fields=["state", "info"])
             else:
-                return HttpResponse("todo handle payment state\n\n"+json.dumps(transaction_details,indent=4),content_type="text/plain")
+                return HttpResponse("todo handle payment state\n\n"+json.dumps(smart_transaction,indent=4),content_type="text/plain")
         elif kwargs.get("action") == "fail":
-            self.payment.fail(info=transaction_details)
+            self.payment.fail(log_data=smart_transaction, info=info)
         elif kwargs.get("action") == "abort":
             self.order.log_action(
                 "pretix.event.order.payment.canceled",
@@ -106,7 +116,7 @@ class ReturnView(SecuconnectOrderView, View):
                     "provider": self.payment.provider,
                 },
             )
-            self.payment.info_data = transaction_details
+            self.payment.info_data = info
             self.payment.state = OrderPayment.PAYMENT_STATE_CANCELED
             self.payment.save(update_fields=["state"])
 
@@ -141,29 +151,42 @@ class ReturnView(SecuconnectOrderView, View):
 class WebhookView(SecuconnectOrderView, View):
     def post(self, request: HttpRequest, *args, **kwargs):
         print("Request body:", request.body)
-        json_data = json.loads(request.body)
-        print(json_data)
-
-        for object in json_data['data']:
-            if object['object'] == 'payment.transactions':
-                payment_transaction_details = self.pprov.client.fetch_payment_transaction_info(object['id'])
-                print("PaymentTransaction:", payment_transaction_details)
+        json_body = json.loads(request.body)
+        
+        for event_object in json_body['data']:
+            if event_object['object'] == 'payment.transactions':
+                self._handle_payment_transaction_update(event_object['id'])
             else:
-                print("SecuPay notified us of unknown object type change", object)
+                logger.warning("SecuPay notified us of unknown object type change %r", event_object)
+        return HttpResponse("ok")
 
-        smart_transaction_id = self.payment.info_data["id"]
-        smart_transaction_details = self.pprov.client.fetch_smart_transaction_info(smart_transaction_id)
-        print("SmartTransaction:", smart_transaction_details)
-
-        self.payment.info_data = smart_transaction_details
-        if smart_transaction_details['status'] == 'ok':
+    def _handle_payment_transaction_update(self, id):
+        payment_transaction_details = self.pprov.client.fetch_payment_transaction_info(id)
+        print("PaymentTransaction:", payment_transaction_details)
+        info = self.payment.info_data
+        status = PaymentStatusSimple(payment_transaction_details['details']['status_simple'])
+        if info['payment_transaction']:
+            old_status = PaymentStatusSimple(info['payment_transaction']['details']['status_simple'])
+            if old_status == status:
+                logging.info("%s: Transaction status update already processed, ignoring", id)
+                return
+        else:
+            old_status = None
+        info['payment_transaction'] = payment_transaction_details
+        logging.info("%s: Transaction status update (%s -> %s)", old_status, status)
+        if status == PaymentStatusSimple.ACCEPTED:
+            self.payment.info_data = info
             self.payment.confirm()
-        elif smart_transaction_details['status'] == 'pending':
+        elif status == PaymentStatusSimple.PENDING:
+            self.payment.info_data = info
             self.payment.state = OrderPayment.PAYMENT_STATE_PENDING
             self.payment.save(update_fields=["state", "info"])
-        elif smart_transaction_details['status'] == 'cancelled':
-            self.payment.create_external_refund()
+        elif status == PaymentStatusSimple.VOID:
+            # TODO - how to detect whether it was an internal or external refund?
+            # self.payment.create_external_refund()
+            pass
+        elif status == PaymentStatusSimple.DENIED:
+            self.payment.fail(info=info)
         else:
-            raise PaymentException("Unexpected payment state reported by SecuConnect: " + smart_transaction_details['status'])
+            raise PaymentException("Unexpected payment state reported by SecuConnect: {}".format(status))
 
-        return HttpResponse("ok")

@@ -1,7 +1,44 @@
+from enum import Enum
+
 import requests
 
 
+class PaymentStatusSimple(Enum):
+    PROCEED = 0
+    """Initial status of every transaction. The payment is not authorised, nor wanted to capture."""
+    ACCEPTED = 1
+    """The request for capture or for invoice payment was accepted. You can deliver now. 
+    (When you use invoice payment, you need to add the partial deliveries, and to request the capture along 
+    with your final delivery.)"""
+    AUTHORIZED = 2
+    """The payment is authorised, but was not requested to capture yet."""
+    DENIED = 3
+    """The payment was rejected for some reason."""
+    ISSUE = 4
+    """A problem occurred after the payment was accepted. For instance, the payer wanted a credit card charge back."""
+    VOID = 5
+    """The payment was cancelled, or refunded."""
+    ISSUE_RESOLVED = 6
+    """The problem is resolved. For instance, the charge back could be objected."""
+    REFUND = 7
+    """The payment is flagged for refund. It will be processed with our next bank cycle."""
+    CREATED = 8
+    PAID = 9
+    """We have received the invoice payment."""
+    PENDING = 10
+    """The payment was requested to capture, but you must wait with delivery for status accepted. This status is 
+    always set when we wait for the advance payment. It is also used with other payment methods to perform an 
+    additional risk check."""
+    SUBSCRIPTION_APPROVED = 11
+    """The transaction used to authorise further payments has been approved."""
+    SUBSCRIPTION_DECLINED = 12
+    """The transaction used to authorise further payments has been declined."""
+    ON_HOLD = 13
+    WAITING_FOR_SHIPMENT = 14
+
+
 class SecuconnectAPIClient:
+
     def __init__(self, cache, environment, client_id, client_secret):
         self.environment = environment
         self.cache = cache
@@ -36,6 +73,9 @@ class SecuconnectAPIClient:
         return token
 
     def _post(self, endpoint, *args, **kwargs):
+        print("Sending SecuConnect API POST request")
+        print("endpoint: ", endpoint)
+        print("body: ", kwargs.get('json'))
         r = requests.post(
             "{base}/api/{ep}".format(base=self.api_base_url, ep=endpoint),
             headers={"Authorization": "Bearer " + self._get_auth_token()},

@@ -237,22 +237,22 @@ class SecuconnectMethod(BasePaymentProvider):
         return template.render(ctx)
 
     def api_payment_details(self, payment: OrderPayment):
+        payment_info = payment.info_data
         return {
-            "id": payment.info_data.get("Id"),
-            "status": payment.info_data.get("Status"),
-            "reference": payment.info_data.get("SixTransactionReference"),
-            "payment_method": payment.info_data.get("PaymentMeans", {})
-            .get("Brand", {})
-            .get("Name"),
-            "payment_source": payment.info_data.get("PaymentMeans", {}).get(
-                "DisplayText"
-            ),
+            "id": payment_info.get('smart_transaction', {}).get('id'),
+            "status": (payment_info.get('payment_transaction', {}).get('details', {}).get('status_simple_text') or
+                       payment_info.get('smart_transaction', {}).get('status')),
+            "payment_method": payment_info.get('smart_transaction', {}).get('payment_method'),
+            "payment_instructions": payment_info.get('smart_transaction', {}).get('payment_instructions'),
+            "payment_context": payment_info.get('smart_transaction', {}).get('payment_context'),
+            "payment_transaction_status_string": payment_info.get('payment_transaction', {}).get('status_text'),
+            "payment_transaction_id": payment_info.get('payment_transaction', {}).get('id'),
         }
 
     def execute_refund(self, refund: OrderRefund):
         try:
             req = self.client._post(
-                "v2/Payment/Transactions/{}/cancel".format(refund.payment.info_data['transactions'][0]['id']),
+                "v2/Payment/Transactions/{}/cancel".format(refund.payment.info_data['payment_transaction']['id']),
                 json={ 'reduce_amount_by': self._decimal_to_int(refund.amount) },
             )
             req.raise_for_status()
@@ -389,24 +389,24 @@ class SecuconnectMethod(BasePaymentProvider):
         except HTTPError:
             logger.exception("SecuConnect error: %s" % req.text)
             try:
-                info_data = req.json()
+                data = req.json()
             except:
-                info_data = {"error": True, "detail": req.text}
-            payment.fail(info=info_data)
+                data = {"error": True, "detail": req.text}
+            payment.fail(log_data=data)
             raise PaymentException(_(
                 "We had trouble communicating with SecuConnect. Please try again and get in touch "
                 "with us if this problem persists."
             ))
         except RequestException as e:
             logger.exception("SecuConnect request error")
-            payment.fail(info={"error": True, "detail": str(e)})
+            payment.fail(log_data={"error": True, "detail": str(e)})
             raise PaymentException(_(
                 "We had trouble communicating with SecuConnect. Please try again and get in touch "
                 "with us if this problem persists."
             ))
 
         data = req.json()
-        payment.info_data = data
+        payment.info_data = {'smart_transaction': data, 'payment_transaction': None}
         payment.state = OrderPayment.PAYMENT_STATE_CREATED
         payment.save()
         request.session["payment_secuconnect_order_secret"] = payment.order.secret

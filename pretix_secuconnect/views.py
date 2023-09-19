@@ -94,7 +94,7 @@ class ReturnView(SecuconnectOrderView, View):
         smart_transaction = self.pprov.client.fetch_smart_transaction_info(transaction_id)
         print("SecuPay smart transaction details:", smart_transaction)
         payment_transaction = self.pprov.client.fetch_payment_transaction_info(smart_transaction['transactions'][0]['id'])
-        print("SecuPay payment transaction details:", smart_transaction)
+        print("SecuPay payment transaction details:", payment_transaction)
         info['smart_transaction'] = smart_transaction
         info['payment_transaction'] = payment_transaction
         if kwargs.get("action") == "success":
@@ -152,7 +152,6 @@ class WebhookView(SecuconnectOrderView, View):
     def post(self, request: HttpRequest, *args, **kwargs):
         print("Request body:", request.body)
         json_body = json.loads(request.body)
-        
         for event_object in json_body['data']:
             if event_object['object'] == 'payment.transactions':
                 self._handle_payment_transaction_update(event_object['id'])
@@ -163,6 +162,7 @@ class WebhookView(SecuconnectOrderView, View):
     def _handle_payment_transaction_update(self, id):
         payment_transaction_details = self.pprov.client.fetch_payment_transaction_info(id)
         print("PaymentTransaction:", payment_transaction_details)
+
         info = self.payment.info_data
         status = PaymentStatusSimple(payment_transaction_details['details']['status_simple'])
         if info['payment_transaction']:
@@ -173,7 +173,8 @@ class WebhookView(SecuconnectOrderView, View):
         else:
             old_status = None
         info['payment_transaction'] = payment_transaction_details
-        logging.info("%s: Transaction status update (%s -> %s)", old_status, status)
+        logging.info("%s: Transaction status update (%s -> %s)", id, old_status, status)
+
         if status == PaymentStatusSimple.ACCEPTED:
             self.payment.info_data = info
             self.payment.confirm()
@@ -181,12 +182,19 @@ class WebhookView(SecuconnectOrderView, View):
             self.payment.info_data = info
             self.payment.state = OrderPayment.PAYMENT_STATE_PENDING
             self.payment.save(update_fields=["state", "info"])
-        elif status == PaymentStatusSimple.VOID:
-            # TODO - how to detect whether it was an internal or external refund?
-            # self.payment.create_external_refund()
-            pass
         elif status == PaymentStatusSimple.DENIED:
             self.payment.fail(info=info)
         else:
-            raise PaymentException("Unexpected payment state reported by SecuConnect: {}".format(status))
+            logger.warning("%s: Unexpected payment state reported by SecuConnect: %r",
+                           id, payment_transaction_details['details'])
+            self.payment.info_data = info
+            self.payment.save(update_fields=["state", "info"])
+            self.payment.order.log_action(
+                "pretix.event.order.payment.status_update",
+                {
+                    "local_id": self.payment.local_id,
+                    "provider": self.payment.provider,
+                    "new_status": str(status),
+                },
+            )
 

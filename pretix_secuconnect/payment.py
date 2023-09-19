@@ -311,9 +311,6 @@ class SecuconnectMethod(BasePaymentProvider):
             ia = InvoiceAddress()
 
         customer = {}
-        customer["email"] = order.email
-        if ia.company:
-            customer["companyname"] = ia.company[:50]
 
         if ia.name_parts.get("family_name"):
             customer["surname"] = ia.name_parts.get("family_name", "")[:50]
@@ -321,12 +318,16 @@ class SecuconnectMethod(BasePaymentProvider):
         elif ia.name:
             customer["surname"] = ia.name.rsplit(" ", 1)[-1][:50]
             customer["forename"] = ia.name.rsplit(" ", 1)[0][:50]
-        #elif not ia.company:
-            #customer["surname"] = "Unknown"
-            #customer["forename"] = "Unknown"
 
-        # if ia.vat_id and ia.vat_id_validated:
-        #    customer["vatid"] = ia.vat_id
+        if not customer:
+            # if no name is provided, supply an empty customer object. this makes SecuConnect show its own
+            # customer details form. otherwise the payment would fail with an unspecific error message.
+            return customer
+
+        customer["email"] = order.email
+        if ia.company:
+            customer["companyname"] = ia.company[:50]
+
         print("Invoice address", ia.__dict__)
         if ia.name_parts.get("salutation"):
             customer["salutation"] = ia.name_parts.get("salutation", "")[:10]

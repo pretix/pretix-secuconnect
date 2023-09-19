@@ -135,7 +135,7 @@ class SecuconnectSettingsHolder(BasePaymentProvider):
 
 class SecuconnectMethod(BasePaymentProvider):
     method = ""
-    abort_pending_allowed = False
+    abort_pending_allowed = True
     refunds_allowed = True
     cancel_flow = True
     payment_methods = []

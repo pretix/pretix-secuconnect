@@ -178,11 +178,11 @@ class WebhookView(SecuconnectOrderView, View):
         if status == PaymentStatusSimple.ACCEPTED:
             self.payment.info_data = info
             self.payment.confirm()
-        elif status == PaymentStatusSimple.PENDING:
+        elif status == PaymentStatusSimple.PENDING and self.payment.state == OrderPayment.PAYMENT_STATE_CREATED:
             self.payment.info_data = info
             self.payment.state = OrderPayment.PAYMENT_STATE_PENDING
             self.payment.save(update_fields=["state", "info"])
-        elif status == PaymentStatusSimple.DENIED:
+        elif status == PaymentStatusSimple.DENIED and self.payment.state in (OrderPayment.PAYMENT_STATE_CREATED, OrderPayment.PAYMENT_STATE_PENDING):
             self.payment.fail(info=info)
         else:
             logger.warning("%s: Unexpected payment state reported by SecuConnect: %r",

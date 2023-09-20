@@ -146,7 +146,7 @@ class SecuconnectMethod(BasePaymentProvider):
     def __init__(self, event: Event):
         super().__init__(event)
         self.settings = SettingsSandbox("payment", "secuconnect", event)
-        self.cache = ObjectRelatedCache(event)
+        self.cache = self.event.cache
         self.client = SecuconnectAPIClient(
             cache=self.cache,
             environment=self.settings.get("environment"),
@@ -353,7 +353,10 @@ class SecuconnectMethod(BasePaymentProvider):
                 "products": [
                     {
                         "id": 1,
-                        "desc": "Pretix Order",
+                        "desc": gettext('Order {order} for {event}').format(
+                            event=request.event.name,
+                            order=payment.order.code
+                        ),
                         "priceOne": self._decimal_to_int(payment.amount),
                         "quantity": 1,
                         "tax": 0,
@@ -408,8 +411,7 @@ class SecuconnectMethod(BasePaymentProvider):
 
         data = req.json()
         payment.info_data = {'smart_transaction': data, 'payment_transaction': None}
-        payment.state = OrderPayment.PAYMENT_STATE_CREATED
-        payment.save()
+        payment.save(update_fields=['info_data'])
         request.session["payment_secuconnect_order_secret"] = payment.order.secret
         print("SecuPay success...")
         print("Response:", data)

@@ -1,7 +1,14 @@
+import logging
 from enum import Enum
+from importlib.resources._common import _
+
+from requests import HTTPError, RequestException
 
 import requests
 
+from pretix.base.payment import PaymentException
+
+logger = logging.getLogger(__name__)
 
 class PaymentStatusSimple(Enum):
     PROCEED = 0
@@ -52,9 +59,9 @@ class SecuconnectAPIClient:
 
     def _get_auth_token(self):
         token = self.cache.get("payment_secuconnect_auth_token")
-        print("Token from cache?", token)
+        logger.debug("Token from cache? %r", token)
         if not token:
-            print("Requesting access token")
+            logger.debug("Requesting access token")
             r = requests.post(
                 "{base}/oauth/token".format(base=self.api_base_url),
                 timeout=20,
@@ -65,7 +72,7 @@ class SecuconnectAPIClient:
                 },
             )
             response = r.json()
-            print("Response", response)
+            logger.debug("Response %r", response)
             token = response["access_token"]
             self.cache.set(
                 "payment_secuconnect_auth_token", token, response["expires_in"]
@@ -73,17 +80,31 @@ class SecuconnectAPIClient:
         return token
 
     def _post(self, endpoint, *args, **kwargs):
-        print("Sending SecuConnect API POST request")
-        print("endpoint: ", endpoint)
-        print("body: ", kwargs.get('json'))
-        r = requests.post(
-            "{base}/api/{ep}".format(base=self.api_base_url, ep=endpoint),
-            headers={"Authorization": "Bearer " + self._get_auth_token()},
-            timeout=20,
-            *args,
-            **kwargs
-        )
-        return r
+        logger.debug("Sending SecuConnect API POST request")
+        logger.debug("endpoint: %r", endpoint)
+        logger.debug("body:     %r", kwargs.get('json'))
+        try:
+            r = requests.post(
+                "{base}/api/{ep}".format(base=self.api_base_url, ep=endpoint),
+                headers={"Authorization": "Bearer " + self._get_auth_token()},
+                timeout=20,
+                *args,
+                **kwargs
+            )
+            r.raise_for_status()
+            return r
+        except HTTPError:
+            logger.exception("SecuConnect error: %s" % r.text)
+            raise PaymentException(_(
+                "We had trouble communicating with SecuConnect. Please try again and get in touch "
+                "with us if this problem persists."
+            )).add_note()
+        except RequestException as e:
+            logger.exception("SecuConnect request error")
+            raise PaymentException(_(
+                "We had trouble communicating with SecuConnect. Please try again and get in touch "
+                "with us if this problem persists."
+            ))
 
     def _get(self, endpoint, *args, **kwargs):
         r = requests.get(
@@ -100,6 +121,14 @@ class SecuconnectAPIClient:
 
     def fetch_payment_transaction_info(self, transaction_id):
         return self._get('v2/Payment/Transactions/{}'.format(transaction_id)).json()
+
+    def cancel_payment_transaction(self, transaction_id, reduce_amount_by):
+        req = self._post(
+            "v2/Payment/Transactions/{}/cancel".format(transaction_id),
+            json={"reduce_amount_by": reduce_amount_by},
+        )
+        req.raise_for_status()
+        return req
 
 
 class SmartTransaction:

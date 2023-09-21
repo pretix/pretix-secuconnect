@@ -311,8 +311,8 @@ class SecuconnectMethod(BasePaymentProvider):
             customer["forename"] = ia.name.rsplit(" ", 1)[0][:50]
 
         if not customer:
-            # if no name is provided, supply an empty customer object. this makes secuconnect show its own
-            # customer details form. otherwise the payment would fail with an unspecific error message.
+            # If no name is provided, supply an empty customer object. This makes secuconnect show its own
+            # customer details form. Otherwise the payment would fail with an unspecific error message.
             return customer
 
         customer["email"] = order.email
@@ -324,13 +324,19 @@ class SecuconnectMethod(BasePaymentProvider):
             customer["salutation"] = ia.name_parts.get("salutation", "")[:10]
         if ia.name_parts.get("title"):
             customer["title"] = ia.name_parts.get("title", "")[:20]
-        if ia.street and ia.zipcode and ia.city and ia.country:
-            customer["address"] = {
-                "street": ia.street[:50],
-                "postal_code": ia.zipcode[:10],
-                "city": ia.city[:50],
-                "country": str(ia.country),
-            }
+        if "address" in self.required_customer_info:
+            if ia.street and ia.zipcode and ia.city and ia.country:
+                customer["address"] = {
+                    "street": ia.street[:50],
+                    "postal_code": ia.zipcode[:10],
+                    "city": ia.city[:50],
+                    "country": str(ia.country),
+                }
+            else:
+                # If no address is provided, but required by the method, supply an empty customer object. This makes
+                # secuconnect show its own customer details form instead of failing with an unspecific error message.
+                return {}
+
         return customer
 
     def _build_smart_transaction_init_body(self, payment):
@@ -434,7 +440,7 @@ class SecuconnectDirectDebit(SecuconnectMethod):
     method = "debit"
     verbose_name = _("SEPA Direct Debit via secuconnect")
     public_name = _("SEPA Direct Debit")
-    # required_customer_info = ("forename", "surname", "address", "email",)
+    required_customer_info = ("forename", "surname", "address", "email",)
     # ...address only required if payment guarantee/scoring contracted
 
 
@@ -475,7 +481,7 @@ class SecuconnectInvoice(SecuconnectMethod):
     method = "invoice"
     verbose_name = _("Invoice via secuconnect")
     public_name = _("Invoice")
-    # required_customer_info = ("forename", "surname", "address", "email",)
+    required_customer_info = ("forename", "surname", "address", "email",)
     # ...address only required if payment guarantee/scoring contracted
 
 

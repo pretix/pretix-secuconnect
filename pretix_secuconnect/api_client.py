@@ -1,7 +1,6 @@
 import logging
 from enum import Enum
-from importlib.resources._common import _
-
+from django.utils.translation import gettext as _
 from requests import HTTPError, RequestException
 
 import requests

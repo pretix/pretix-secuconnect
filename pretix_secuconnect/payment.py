@@ -10,7 +10,7 @@ from django.conf import settings
 from django.core import signing
 from django.http import HttpRequest
 from django.template.loader import get_template
-from django.utils.translation import gettext_lazy as _, pgettext
+from django.utils.translation import gettext, gettext_lazy as _, pgettext
 from requests import HTTPError, RequestException
 
 from pretix.base.cache import ObjectRelatedCache
@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 class SecuconnectSettingsHolder(BasePaymentProvider):
     identifier = "secuconnect"
-    verbose_name = _("SecuConnect")
+    verbose_name = _("secuconnect")
     is_enabled = False
     is_meta = True
 
@@ -256,7 +256,7 @@ class SecuconnectMethod(BasePaymentProvider):
                 self._decimal_to_int(refund.amount)
             )
         except HTTPError:
-            logger.exception('SecuConnect error: %s' % req.text)
+            logger.exception('secuconnect error: %s' % req.text)
             try:
                 refund.info_data = req.json()
             except:
@@ -264,7 +264,7 @@ class SecuconnectMethod(BasePaymentProvider):
                     'error': True,
                     'detail': req.text
                 }
-            raise PaymentException(_('SecuConnect reported an error: {}').format(refund.info_data.get('error_user')))
+            raise PaymentException(_('secuconnect reported an error: {}').format(refund.info_data.get('error_user')))
         else:
             refund.done()
 
@@ -272,7 +272,7 @@ class SecuconnectMethod(BasePaymentProvider):
     def test_mode_message(self):
         if self.is_test_mode:
             return _(
-                "The SecuConnect plugin is operating in test mode. No money will actually be transferred."
+                "The secuconnect plugin is operating in test mode. No money will actually be transferred."
             )
         return None
 
@@ -319,7 +319,7 @@ class SecuconnectMethod(BasePaymentProvider):
             customer["forename"] = ia.name.rsplit(" ", 1)[0][:50]
 
         if not customer:
-            # if no name is provided, supply an empty customer object. this makes SecuConnect show its own
+            # if no name is provided, supply an empty customer object. this makes secuconnect show its own
             # customer details form. otherwise the payment would fail with an unspecific error message.
             return customer
 
@@ -353,7 +353,7 @@ class SecuconnectMethod(BasePaymentProvider):
                     {
                         "id": 1,
                         "desc": gettext('Order {order} for {event}').format(
-                            event=request.event.name,
+                            event=payment.order.event.name,
                             order=payment.order.code
                         ),
                         "priceOne": self._decimal_to_int(payment.amount),
@@ -390,29 +390,29 @@ class SecuconnectMethod(BasePaymentProvider):
             )
             req.raise_for_status()
         except HTTPError:
-            logger.exception("SecuConnect error: %s" % req.text)
+            logger.exception("secuconnect error: %s" % req.text)
             try:
                 data = req.json()
             except:
                 data = {"error": True, "detail": req.text}
             payment.fail(log_data=data)
             raise PaymentException(_(
-                "We had trouble communicating with SecuConnect. Please try again and get in touch "
+                "We had trouble communicating with secuconnect. Please try again and get in touch "
                 "with us if this problem persists."
             ))
         except RequestException as e:
-            logger.exception("SecuConnect request error")
+            logger.exception("secuconnect request error")
             payment.fail(log_data={"error": True, "detail": str(e)})
             raise PaymentException(_(
-                "We had trouble communicating with SecuConnect. Please try again and get in touch "
+                "We had trouble communicating with secuconnect. Please try again and get in touch "
                 "with us if this problem persists."
             ))
 
         data = req.json()
         payment.info_data = {'smart_transaction': data, 'payment_transaction': None}
-        payment.save(update_fields=['info_data'])
+        payment.save(update_fields=['info'])
         request.session["payment_secuconnect_order_secret"] = payment.order.secret
-        print("SecuPay success...")
+        print("secupay success...")
         print("Response:", data)
 
         return self.redirect(request, data.get("payment_links").get(self.method))
@@ -451,13 +451,13 @@ class SecuconnectMethod(BasePaymentProvider):
 
 class SecuconnectCC(SecuconnectMethod):
     method = "creditcard"
-    verbose_name = _("Credit card via SecuConnect")
+    verbose_name = _("Credit card via secuconnect")
     public_name = _("Credit card")
 
 
 class SecuconnectDirectDebit(SecuconnectMethod):
     method = "debit"
-    verbose_name = _("SEPA Direct Debit via Secuconnect")
+    verbose_name = _("SEPA Direct Debit via secuconnect")
     public_name = _("SEPA Direct Debit")
     # required_customer_info = ("forename", "surname", "address", "email",)
     # ...address only required if payment guarantee/scoring contracted
@@ -465,20 +465,20 @@ class SecuconnectDirectDebit(SecuconnectMethod):
 
 class SecuconnectPrepaid(SecuconnectMethod):
     method = "prepaid"
-    verbose_name = _("Bank transfer via Secuconnect")
+    verbose_name = _("Bank transfer via secuconnect")
     public_name = _("Bank transfer")
 
 
 class SecuconnectSofort(SecuconnectMethod):
     method = "sofort"
-    verbose_name = _("SOFORT via Secuconnect")
+    verbose_name = _("SOFORT via secuconnect")
     public_name = _("SOFORT")
     required_customer_info = ("forename", "surname", "address", "email",)
 
 
 class SecuconnectEasycredit(SecuconnectMethod):
     method = "easycredit"
-    verbose_name = _("easycredit via Secuconnect")
+    verbose_name = _("easycredit via secuconnect")
     public_name = _("easycredit")
     required_customer_info = ("forename", "surname", "address", "email",)
     allow_business = False
@@ -486,19 +486,19 @@ class SecuconnectEasycredit(SecuconnectMethod):
 
 class SecuconnectEPS(SecuconnectMethod):
     method = "eps"
-    verbose_name = _("EPS via Secuconnect")
+    verbose_name = _("EPS via secuconnect")
     public_name = _("EPS")
 
 
 class SecuconnectGiropay(SecuconnectMethod):
     method = "giropay"
-    verbose_name = _("GiroPay via Secuconnect")
+    verbose_name = _("GiroPay via secuconnect")
     public_name = _("GiroPay")
 
 
 class SecuconnectInvoice(SecuconnectMethod):
     method = "invoice"
-    verbose_name = _("Invoice via Secuconnect")
+    verbose_name = _("Invoice via secuconnect")
     public_name = _("Invoice")
     # required_customer_info = ("forename", "surname", "address", "email",)
     # ...address only required if payment guarantee/scoring contracted
@@ -506,7 +506,7 @@ class SecuconnectInvoice(SecuconnectMethod):
 
 class SecuconnectPaypal(SecuconnectMethod):
     method = "paypal"
-    verbose_name = _("PayPal via Secuconnect")
+    verbose_name = _("PayPal via secuconnect")
     public_name = _("PayPal")
     # required_customer_info = ("forename", "surname", "address", "email",)
     # ...address only required for physical shipment

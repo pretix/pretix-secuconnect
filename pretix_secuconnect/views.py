@@ -91,6 +91,10 @@ class ReturnView(SecuconnectOrderView, View):
         print("SecuPay return:",kwargs)
         info = self.payment.info_data
         transaction_id = info['smart_transaction']['id']
+        if self.payment.state != OrderPayment.PAYMENT_STATE_CREATED:
+            logger.warning("%s: secuconnect return URL was accessed in incorrect payment state", transaction_id)
+            return self._redirect_to_order()
+
         smart_transaction = self.pprov.client.fetch_smart_transaction_info(transaction_id)
         print("SecuPay smart transaction details:", smart_transaction)
         payment_transaction = self.pprov.client.fetch_payment_transaction_info(smart_transaction['transactions'][0]['id'])
@@ -105,7 +109,9 @@ class ReturnView(SecuconnectOrderView, View):
                 self.payment.state = OrderPayment.PAYMENT_STATE_PENDING
                 self.payment.save(update_fields=["state", "info"])
             else:
-                return HttpResponse("todo handle payment state\n\n"+json.dumps(smart_transaction,indent=4),content_type="text/plain")
+                logger.error("%s: Unexpected payment state '%r' reported by secuconnect - failing payment",
+                             transaction_id, smart_transaction['status'])
+                self.payment.fail(log_data=smart_transaction, info=info)
         elif kwargs.get("action") == "fail":
             self.payment.fail(log_data=smart_transaction, info=info)
         elif kwargs.get("action") == "abort":
@@ -118,7 +124,7 @@ class ReturnView(SecuconnectOrderView, View):
             )
             self.payment.info_data = info
             self.payment.state = OrderPayment.PAYMENT_STATE_CANCELED
-            self.payment.save(update_fields=["state"])
+            self.payment.save(update_fields=["state", "info"])
 
         return self._redirect_to_order()
 
@@ -185,16 +191,16 @@ class WebhookView(SecuconnectOrderView, View):
         elif status == PaymentStatusSimple.DENIED and self.payment.state in (OrderPayment.PAYMENT_STATE_CREATED, OrderPayment.PAYMENT_STATE_PENDING):
             self.payment.fail(info=info)
         else:
-            logger.warning("%s: Unexpected payment state reported by SecuConnect: %r",
+            logger.warning("%s: Unexpected payment state '%r' reported by secuconnect",
                            id, payment_transaction_details['details'])
             self.payment.info_data = info
             self.payment.save(update_fields=["state", "info"])
-            self.payment.order.log_action(
-                "pretix.event.order.payment.status_update",
-                {
-                    "local_id": self.payment.local_id,
-                    "provider": self.payment.provider,
-                    "new_status": str(status),
-                },
-            )
+        self.payment.order.log_action(
+            "pretix_secuconnect.event.status_update",
+            {
+                "local_id": self.payment.local_id,
+                "provider": self.payment.provider,
+                "new_status": str(status),
+            },
+        )
 

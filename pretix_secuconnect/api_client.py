@@ -1,9 +1,9 @@
 import logging
 from enum import Enum
-from django.utils.translation import gettext as _
-from requests import HTTPError, RequestException
 
 import requests
+from django.utils.translation import gettext as _
+from requests import HTTPError, RequestException
 
 from pretix.base.payment import PaymentException
 

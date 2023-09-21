@@ -3,7 +3,6 @@ import json
 import logging
 import urllib
 
-from .api_client import PaymentStatusSimple
 from django.contrib import messages
 from django.core import signing
 from django.http import Http404, HttpRequest, HttpResponse, HttpResponseBadRequest
@@ -18,6 +17,7 @@ from django.views.decorators.csrf import csrf_exempt
 from pretix.base.models import Order, OrderPayment, Quota
 from pretix.base.payment import PaymentException
 from pretix.multidomain.urlreverse import build_absolute_uri, eventreverse
+from .api_client import PaymentStatusSimple
 
 logger = logging.getLogger(__name__)
 

@@ -4,6 +4,7 @@ import logging
 from decimal import Decimal
 from collections import OrderedDict
 
+from pretix.base.forms import SecretKeySettingsField
 from .api_client import SecuconnectAPIClient, SecuconnectException
 from django import forms
 from django.conf import settings
@@ -56,7 +57,7 @@ class SecuconnectSettingsHolder(BasePaymentProvider):
             ),
             (
                 "client_secret",
-                forms.CharField(
+                SecretKeySettingsField(
                     label=_("OAuth Client Secret"),
                 ),
             ),

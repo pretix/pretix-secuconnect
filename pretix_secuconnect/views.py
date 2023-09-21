@@ -206,6 +206,7 @@ class WebhookView(SecuconnectOrderView, View):
                            id, payment_transaction_details['details'])
             self.payment.info_data = info
             self.payment.save(update_fields=["state", "info"])
+
         self.payment.order.log_action(
             "pretix_secuconnect.event.status_update",
             {

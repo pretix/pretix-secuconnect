@@ -88,7 +88,7 @@ class SecuconnectOrderView:
 
 class ReturnView(SecuconnectOrderView, View):
     def get(self, request: HttpRequest, *args, **kwargs):
-        print("SecuPay return:",kwargs)
+        print("secuconnect return:",kwargs)
         info = self.payment.info_data
         transaction_id = info['smart_transaction']['id']
         if self.payment.state != OrderPayment.PAYMENT_STATE_CREATED:
@@ -97,9 +97,7 @@ class ReturnView(SecuconnectOrderView, View):
 
         try:
             smart_transaction = self.pprov.client.fetch_smart_transaction_info(transaction_id)
-            print("SecuPay smart transaction details:", smart_transaction)
             payment_transaction = self.pprov.client.fetch_payment_transaction_info(smart_transaction['transactions'][0]['id'])
-            print("SecuPay payment transaction details:", payment_transaction)
         except PaymentException as ex:
             messages.error(self.request, str(ex))
             return self._redirect_to_order()
@@ -170,7 +168,7 @@ class WebhookView(SecuconnectOrderView, View):
             if event_object['object'] == 'payment.transactions':
                 self._handle_payment_transaction_update(event_object['id'])
             else:
-                logger.warning("SecuPay notified us of unknown object type change %r", event_object)
+                logger.warning("secuconnect notified us of unknown object type change %r", event_object)
         return HttpResponse("ok")
 
     def _handle_payment_transaction_update(self, id):

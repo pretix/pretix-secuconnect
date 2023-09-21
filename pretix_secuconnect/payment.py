@@ -141,6 +141,7 @@ class SecuconnectMethod(BasePaymentProvider):
 
     allow_business = True
     required_customer_info = ("forename", "surname", "email",)
+    checkout_template_id = "COT_WD0DE66HN2XWJHW8JM88003YG0NEA2"
 
     def __init__(self, event: Event):
         super().__init__(event)
@@ -366,7 +367,7 @@ class SecuconnectMethod(BasePaymentProvider):
             },
             "application_context": {
                 # template ID for checkout (not subscription)
-                "checkout_template": "COT_WD0DE66HN2XWJHW8JM88003YG0NEA2",
+                "checkout_template": self.checkout_template_id,
                 "return_urls": {
                     "url_success": self._return_url("return", payment, "success"),
                     "url_error": self._return_url("return", payment, "fail"),
@@ -393,7 +394,7 @@ class SecuconnectMethod(BasePaymentProvider):
         payment.info_data = {'smart_transaction': data, 'payment_transaction': None}
         payment.save(update_fields=['info'])
         request.session["payment_secuconnect_order_secret"] = payment.order.secret
-        print("secupay success...")
+        print("secuconnect success...")
         print("Response:", data)
 
         return self.redirect(request, data.get("payment_links").get(self.method))
@@ -463,6 +464,7 @@ class SecuconnectEasycredit(SecuconnectMethod):
     public_name = _("easycredit")
     required_customer_info = ("forename", "surname", "address", "email",)
     allow_business = False
+    checkout_template_id = "COT_3DP70FK5H2XP02TCVQ28000NG095A2"
 
 
 class SecuconnectEPS(SecuconnectMethod):

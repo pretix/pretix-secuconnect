@@ -54,7 +54,6 @@ def redirect_view(request: HttpRequest, *args, **kwargs):
 
 class SecuconnectOrderView:
     def dispatch(self, request: HttpRequest, *args, **kwargs):
-        print("SecuconnectOrderView",kwargs)
         try:
             self.order = request.event.orders.get(code=kwargs["order"])
             if (
@@ -88,7 +87,6 @@ class SecuconnectOrderView:
 
 class ReturnView(SecuconnectOrderView, View):
     def get(self, request: HttpRequest, *args, **kwargs):
-        print("secuconnect return:",kwargs)
         info = self.payment.info_data
         transaction_id = info['smart_transaction']['id']
         if self.payment.state != OrderPayment.PAYMENT_STATE_CREATED:
@@ -162,7 +160,6 @@ class ReturnView(SecuconnectOrderView, View):
 @method_decorator(csrf_exempt, 'dispatch')
 class WebhookView(SecuconnectOrderView, View):
     def post(self, request: HttpRequest, *args, **kwargs):
-        print("Request body:", request.body)
         json_body = json.loads(request.body)
         for event_object in json_body['data']:
             if event_object['object'] == 'payment.transactions':
@@ -173,7 +170,6 @@ class WebhookView(SecuconnectOrderView, View):
 
     def _handle_payment_transaction_update(self, id):
         payment_transaction_details = self.pprov.client.fetch_payment_transaction_info(id)
-        print("PaymentTransaction:", payment_transaction_details)
 
         info = self.payment.info_data
         status = PaymentStatusSimple(payment_transaction_details['details']['status_simple'])

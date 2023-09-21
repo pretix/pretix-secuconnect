@@ -1,7 +1,7 @@
 [project]
 name = "pretix-secuconnect"
 dynamic = ["version"]
-description = "Accept payments through SecuConnect."
+description = "Accept payments through secuconnect."
 readme = "README.rst"
 license = {text = "Apache"}
 keywords = ["pretix"]

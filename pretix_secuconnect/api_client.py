@@ -80,7 +80,7 @@ class SecuconnectAPIClient:
         return token
 
     def _post(self, endpoint, *args, **kwargs):
-        logger.debug("Sending SecuConnect API POST request")
+        logger.debug("Sending secuconnect API POST request")
         logger.debug("endpoint: %r", endpoint)
         logger.debug("body:     %r", kwargs.get('json'))
         return self._perform_request('POST', endpoint, *args, **kwargs)
@@ -101,7 +101,7 @@ class SecuconnectAPIClient:
             r.raise_for_status()
             return r.json()
         except HTTPError as e:
-            logger.exception("SecuConnect API returned error: %s" % r.text)
+            logger.exception("secuconnect API returned error: %s" % r.text)
             try:
                 error_object = r.json()
             except:
@@ -110,13 +110,13 @@ class SecuconnectAPIClient:
                 raise SecuconnectException(error_object)
 
             raise PaymentException(_(
-                "We had trouble communicating with SecuConnect. Please try again and get in touch "
+                "We had trouble communicating with secuconnect. Please try again and get in touch "
                 "with us if this problem persists."
             )) from e
         except RequestException as e:
-            logger.exception("SecuConnect API request failed")
+            logger.exception("secuconnect API request failed")
             raise PaymentException(_(
-                "We had trouble communicating with SecuConnect. Please try again and get in touch "
+                "We had trouble communicating with secuconnect. Please try again and get in touch "
                 "with us if this problem persists."
             )) from e
 

@@ -15,7 +15,7 @@ from django.views import View
 from django.views.decorators.clickjacking import xframe_options_exempt
 from django.views.decorators.csrf import csrf_exempt
 
-from pretix.base.models import Order, OrderPayment
+from pretix.base.models import Order, OrderPayment, Quota
 from pretix.base.payment import PaymentException
 from pretix.multidomain.urlreverse import build_absolute_uri, eventreverse
 
@@ -95,16 +95,24 @@ class ReturnView(SecuconnectOrderView, View):
             logger.warning("%s: secuconnect return URL was accessed in incorrect payment state", transaction_id)
             return self._redirect_to_order()
 
-        smart_transaction = self.pprov.client.fetch_smart_transaction_info(transaction_id)
-        print("SecuPay smart transaction details:", smart_transaction)
-        payment_transaction = self.pprov.client.fetch_payment_transaction_info(smart_transaction['transactions'][0]['id'])
-        print("SecuPay payment transaction details:", payment_transaction)
+        try:
+            smart_transaction = self.pprov.client.fetch_smart_transaction_info(transaction_id)
+            print("SecuPay smart transaction details:", smart_transaction)
+            payment_transaction = self.pprov.client.fetch_payment_transaction_info(smart_transaction['transactions'][0]['id'])
+            print("SecuPay payment transaction details:", payment_transaction)
+        except PaymentException as ex:
+            messages.error(self.request, str(ex))
+            return self._redirect_to_order()
+
         info['smart_transaction'] = smart_transaction
         info['payment_transaction'] = payment_transaction
         if kwargs.get("action") == "success":
             self.payment.info_data = info
             if smart_transaction['status'] == 'ok':
-                self.payment.confirm()
+                try:
+                    self.payment.confirm()
+                except Quota.QuotaExceededException:
+                    pass
             elif smart_transaction['status'] == 'pending':
                 self.payment.state = OrderPayment.PAYMENT_STATE_PENDING
                 self.payment.save(update_fields=["state", "info"])
@@ -183,7 +191,10 @@ class WebhookView(SecuconnectOrderView, View):
 
         if status == PaymentStatusSimple.ACCEPTED:
             self.payment.info_data = info
-            self.payment.confirm()
+            try:
+                self.payment.confirm()
+            except Quota.QuotaExceededException:
+                pass
         elif status == PaymentStatusSimple.PENDING and self.payment.state == OrderPayment.PAYMENT_STATE_CREATED:
             self.payment.info_data = info
             self.payment.state = OrderPayment.PAYMENT_STATE_PENDING

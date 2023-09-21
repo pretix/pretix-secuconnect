@@ -4,7 +4,7 @@ import logging
 from decimal import Decimal
 from collections import OrderedDict
 
-from .api_client import SecuconnectAPIClient
+from .api_client import SecuconnectAPIClient, SecuconnectException
 from django import forms
 from django.conf import settings
 from django.core import signing
@@ -251,20 +251,13 @@ class SecuconnectMethod(BasePaymentProvider):
 
     def execute_refund(self, refund: OrderRefund):
         try:
-            req = self.client.cancel_payment_transaction(
+            self.client.cancel_payment_transaction(
                 refund.payment.info_data["payment_transaction"]["id"],
                 self._decimal_to_int(refund.amount)
             )
-        except HTTPError:
-            logger.exception('secuconnect error: %s' % req.text)
-            try:
-                refund.info_data = req.json()
-            except:
-                refund.info_data = {
-                    'error': True,
-                    'detail': req.text
-                }
-            raise PaymentException(_('secuconnect reported an error: {}').format(refund.info_data.get('error_user')))
+        except SecuconnectException as ex:
+            refund.info_data = ex.error_object
+            raise
         else:
             refund.done()
 
@@ -384,31 +377,14 @@ class SecuconnectMethod(BasePaymentProvider):
 
     def execute_payment(self, request: HttpRequest, payment: OrderPayment):
         try:
-            req = self.client._post(
-                "v2/Smart/Transactions",
-                json=self._build_smart_transaction_init_body(payment),
-            )
-            req.raise_for_status()
-        except HTTPError:
-            logger.exception("secuconnect error: %s" % req.text)
-            try:
-                data = req.json()
-            except:
-                data = {"error": True, "detail": req.text}
-            payment.fail(log_data=data)
-            raise PaymentException(_(
-                "We had trouble communicating with secuconnect. Please try again and get in touch "
-                "with us if this problem persists."
-            ))
-        except RequestException as e:
-            logger.exception("secuconnect request error")
-            payment.fail(log_data={"error": True, "detail": str(e)})
-            raise PaymentException(_(
-                "We had trouble communicating with secuconnect. Please try again and get in touch "
-                "with us if this problem persists."
-            ))
+            data = self.client.start_smart_transaction(self._build_smart_transaction_init_body(payment))
+        except SecuconnectException as ex:
+            payment.fail(log_data=ex.error_object)
+            raise
+        except PaymentException as ex:
+            payment.fail(log_data={"error": True, "detail": str(ex)})
+            raise
 
-        data = req.json()
         payment.info_data = {'smart_transaction': data, 'payment_transaction': None}
         payment.save(update_fields=['info'])
         request.session["payment_secuconnect_order_secret"] = payment.order.secret

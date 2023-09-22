@@ -170,10 +170,6 @@ class SecuconnectAPIClient:
         )
 
 
-class SmartTransaction:
-    pass
-
-
 class SecuconnectException(BaseException):
     """
     Raised by the API client in case the secuconnect API returns an error object as defined in

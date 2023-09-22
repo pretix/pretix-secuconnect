@@ -124,16 +124,23 @@ class SecuconnectAPIClient:
 
     def _scrub_customer_data(self, transaction_data):
         try:
-            del transaction_data["customer"]["contact"]
+            transaction_data["customer"] = {
+                k: v if k in ("id", "object") else "█"
+                for (k, v) in transaction_data["customer"].items()
+            }
         except (TypeError, KeyError):
             pass
         return transaction_data
 
     def fetch_smart_transaction_info(self, transaction_id):
-        return self._scrub_customer_data(self._get("v2/Smart/Transactions/{}".format(transaction_id)))
+        return self._scrub_customer_data(
+            self._get("v2/Smart/Transactions/{}".format(transaction_id))
+        )
 
     def fetch_payment_transaction_info(self, transaction_id):
-        return self._scrub_customer_data(self._get("v2/Payment/Transactions/{}".format(transaction_id)))
+        return self._scrub_customer_data(
+            self._get("v2/Payment/Transactions/{}".format(transaction_id))
+        )
 
     def fetch_payment_transaction_status(self, transaction_id):
         return self._get(
@@ -144,10 +151,13 @@ class SecuconnectAPIClient:
         return self._scrub_customer_data(self._post("v2/Smart/Transactions", json=body))
 
     def cancel_payment_transaction(self, transaction_id, reduce_amount_by):
-        return [self._scrub_customer_data(transaction) for transaction in self._post(
-            "v2/Payment/Transactions/{}/cancel".format(transaction_id),
-            json={"reduce_amount_by": reduce_amount_by},
-        )]
+        return [
+            self._scrub_customer_data(transaction)
+            for transaction in self._post(
+                "v2/Payment/Transactions/{}/cancel".format(transaction_id),
+                json={"reduce_amount_by": reduce_amount_by},
+            )
+        ]
 
     def set_payment_transaction_status_for_test(
         self, transaction_id, method, new_status
@@ -164,7 +174,7 @@ class SmartTransaction:
     pass
 
 
-class SecuconnectException:
+class SecuconnectException(BaseException):
     """
     Raised by the API client in case the secuconnect API returns an error object as defined in
     https://developer.secuconnect.com/integration/API_Errors_-_secuconnect_API.html

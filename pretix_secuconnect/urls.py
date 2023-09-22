@@ -1,5 +1,6 @@
 from django.urls import include, path
 
+from pretix.multidomain import event_path
 from .views import ReturnView, WebhookView, redirect_view
 
 event_patterns = [
@@ -13,10 +14,11 @@ event_patterns = [
                     ReturnView.as_view(),
                     name="return",
                 ),
-                path(
+                event_path(
                     "webhook/<str:order>/<str:hash>/<int:payment>/<str:action>",
                     WebhookView.as_view(),
                     name="webhook",
+                    require_live=False,
                 ),
             ]
         ),

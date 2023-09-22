@@ -20,58 +20,55 @@ def print_obj(obj):
     print(json.dumps(obj, indent=4))
 
 
+def register_command(command_name, *parameters):
+    def handler(fn):
+        subparser = subparsers.add_parser(command_name)
+        subparser.set_defaults(func=fn)
+        for param_name, kwargs in parameters:
+            subparser.add_argument(param_name, **kwargs)
+        return fn
+
+    return handler
+
+
 parser = argparse.ArgumentParser(description="client for testing SecuConnect API")
 parser.add_argument("--env", type=str, default="testing")
 parser.add_argument("--debug", default=False, action="store_true")
 subparsers = parser.add_subparsers(required=True)
 
 
+@register_command("stx", ("id", {"type": str}))
 def stx_info(args):
     print_obj(client.fetch_smart_transaction_info(args.id))
 
 
-parser_stx = subparsers.add_parser("stx")
-parser_stx.add_argument("id", type=str)
-parser_stx.set_defaults(func=stx_info)
-
-
+@register_command("ptx", ("id", {"type": str}))
 def ptx_info(args):
     print_obj(client.fetch_payment_transaction_info(args.id))
 
 
-parser_ptx = subparsers.add_parser("ptx")
-parser_ptx.add_argument("id", type=str)
-parser_ptx.set_defaults(func=ptx_info)
-
-
+@register_command("ptx-checkstatus", ("id", {"type": str}))
 def ptx_status(args):
     print_obj(client.fetch_payment_transaction_status(args.id))
 
 
-parser_ptx = subparsers.add_parser("ptx-checkstatus")
-parser_ptx.add_argument("id", type=str)
-parser_ptx.set_defaults(func=ptx_status)
-
-
+@register_command("ptx-cancel", ("id", {"type": str}), ("amount", {"type": int}))
 def ptx_cancel(args):
     print_obj(client.cancel_payment_transaction(args.id, args.amount))
 
 
-parser_ptx_cancel = subparsers.add_parser("ptx-cancel")
-parser_ptx_cancel.add_argument("id", type=str)
-parser_ptx_cancel.add_argument("amount", type=int)
-parser_ptx_cancel.set_defaults(func=ptx_cancel)
-
-
+@register_command(
+    "ptx-forcestatus",
+    ("id", {"type": str}),
+    ("method", {"type": str, "choices": ["debits", "prepays", "invoices", "creditcards", "sofort"]}),
+    ("status", {"type": int}),
+)
 def ptx_forcestatus(args):
-    print_obj(client.set_payment_transaction_status_for_test(args.id, args.method, args.status))
-
-
-parser_ptx_forcestatus = subparsers.add_parser("ptx-forcestatus")
-parser_ptx_forcestatus.add_argument("id", type=str)
-parser_ptx_forcestatus.add_argument("method", type=str, choices=['debits', 'prepays', 'invoices', 'creditcards', 'sofort'])
-parser_ptx_forcestatus.add_argument("status", type=int)
-parser_ptx_forcestatus.set_defaults(func=ptx_forcestatus)
+    print_obj(
+        client.set_payment_transaction_status_for_test(
+            args.id, args.method, args.status
+        )
+    )
 
 
 args = parser.parse_args()

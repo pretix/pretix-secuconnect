@@ -106,10 +106,13 @@ class ReturnView(SecuconnectOrderView, View):
                 smart_transaction["transactions"][0]["id"]
             )
         except (RequestException, SecuconnectException) as ex:
-            messages.error(self.request, _(
-                        "We had trouble communicating with secuconnect. Please try again and get in touch "
-                        "with us if this problem persists."
-                    ))
+            messages.error(
+                self.request,
+                _(
+                    "We had trouble communicating with secuconnect. Please try again and get in touch "
+                    "with us if this problem persists."
+                ),
+            )
             return self._redirect_to_order()
 
         info["smart_transaction"] = smart_transaction
@@ -187,14 +190,10 @@ class WebhookView(SecuconnectOrderView, View):
         return HttpResponse("ok")
 
     def _handle_payment_transaction_update(self, id):
-        transaction = self.pprov.client.fetch_payment_transaction_info(
-            id
-        )
+        transaction = self.pprov.client.fetch_payment_transaction_info(id)
 
         info = self.payment.info_data
-        status = PaymentStatusSimple(
-            transaction["details"]["status_simple"]
-        )
+        status = PaymentStatusSimple(transaction["details"]["status_simple"])
         if info["payment_transaction"]:
             old_status = PaymentStatusSimple(
                 info["payment_transaction"]["details"]["status_simple"]
@@ -228,15 +227,20 @@ class WebhookView(SecuconnectOrderView, View):
         ):
             self.payment.fail(info=info)
         elif (
-            status == PaymentStatusSimple.ISSUE
+            status
+            in (
+                PaymentStatusSimple.ISSUE,
+                PaymentStatusSimple.REFUND,
+                PaymentStatusSimple.VOID,
+            )
             and self.payment.state == OrderPayment.PAYMENT_STATE_CONFIRMED
         ):
             payment_status = self.pprov.client.fetch_payment_transaction_status(id)
-            remaining_amount = self.pprov.amount_to_decimal(payment_status['amount'])
+            remaining_amount = self.pprov.amount_to_decimal(payment_status["amount"])
             if remaining_amount < self.payment.amount:
                 self.payment.create_external_refund(
                     info=json.dumps(transaction),
-                    amount=self.payment.amount - remaining_amount
+                    amount=self.payment.amount - remaining_amount,
                 )
         else:
             logger.warning(

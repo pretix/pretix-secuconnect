@@ -72,7 +72,7 @@ class SecuconnectAPIClient:
                 try:
                     error_object = r.json()
                 except:  # noqa
-                    error_object = {'exception': str(e)}
+                    error_object = {"exception": str(e)}
                 logger.exception(
                     "Failed to retrieve secuconnect access token (%r)", error_object
                 )
@@ -112,7 +112,7 @@ class SecuconnectAPIClient:
             try:
                 error_object = r.json()
             except:  # noqa
-                error_object = {'exception': str(e)}
+                error_object = {"exception": str(e)}
             logger.exception("secuconnect API returned error (%r)", error_object)
             if (
                 error_object.get("status") == "error"
@@ -122,11 +122,18 @@ class SecuconnectAPIClient:
 
             raise
 
+    def _scrub_customer_data(self, transaction_data):
+        try:
+            del transaction_data["customer"]["contact"]
+        except (TypeError, KeyError):
+            pass
+        return transaction_data
+
     def fetch_smart_transaction_info(self, transaction_id):
-        return self._get("v2/Smart/Transactions/{}".format(transaction_id))
+        return self._scrub_customer_data(self._get("v2/Smart/Transactions/{}".format(transaction_id)))
 
     def fetch_payment_transaction_info(self, transaction_id):
-        return self._get("v2/Payment/Transactions/{}".format(transaction_id))
+        return self._scrub_customer_data(self._get("v2/Payment/Transactions/{}".format(transaction_id)))
 
     def fetch_payment_transaction_status(self, transaction_id):
         return self._get(
@@ -134,17 +141,21 @@ class SecuconnectAPIClient:
         )
 
     def start_smart_transaction(self, body):
-        return self._post("v2/Smart/Transactions", json=body)
+        return self._scrub_customer_data(self._post("v2/Smart/Transactions", json=body))
 
     def cancel_payment_transaction(self, transaction_id, reduce_amount_by):
-        return self._post(
+        return [self._scrub_customer_data(transaction) for transaction in self._post(
             "v2/Payment/Transactions/{}/cancel".format(transaction_id),
             json={"reduce_amount_by": reduce_amount_by},
-        )
+        )]
 
-    def set_payment_transaction_status_for_test(self, transaction_id, method, new_status):
+    def set_payment_transaction_status_for_test(
+        self, transaction_id, method, new_status
+    ):
         return self._post(
-            "v2/Payment/Secupay{}/{}/TestChangedPaymentStatus".format(method, transaction_id),
+            "v2/Payment/Secupay{}/{}/TestChangedPaymentStatus".format(
+                method, transaction_id
+            ),
             json={"new_status_id": new_status},
         )
 

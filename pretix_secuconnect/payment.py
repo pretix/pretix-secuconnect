@@ -1,24 +1,23 @@
+from typing import Union
+
 import hashlib
 import json
 import logging
 from collections import OrderedDict
 from decimal import Decimal
-from typing import Union
-
 from django import forms
 from django.conf import settings
 from django.core import signing
 from django.http import HttpRequest
 from django.template.loader import get_template
 from django.utils.translation import gettext, gettext_lazy as _, pgettext
-from requests import RequestException
-
 from pretix.base.decimal import round_decimal
 from pretix.base.forms import SecretKeySettingsField
 from pretix.base.models import Event, InvoiceAddress, Order, OrderPayment, OrderRefund
 from pretix.base.payment import BasePaymentProvider, PaymentException
 from pretix.base.settings import SettingsSandbox
 from pretix.multidomain.urlreverse import build_absolute_uri
+from requests import RequestException
 
 from .api_client import SecuconnectAPIClient, SecuconnectException
 

@@ -60,7 +60,13 @@ def ptx_cancel(args):
 @register_command(
     "ptx-forcestatus",
     ("id", {"type": str}),
-    ("method", {"type": str, "choices": ["debits", "prepays", "invoices", "creditcards", "sofort"]}),
+    (
+        "method",
+        {
+            "type": str,
+            "choices": ["debits", "prepays", "invoices", "creditcards", "sofort"],
+        },
+    ),
     ("status", {"type": int}),
 )
 def ptx_forcestatus(args):

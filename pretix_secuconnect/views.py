@@ -2,7 +2,6 @@ import hashlib
 import json
 import logging
 import urllib
-
 from django.contrib import messages
 from django.core import signing
 from django.http import Http404, HttpRequest, HttpResponse, HttpResponseBadRequest
@@ -13,11 +12,9 @@ from django.utils.translation import gettext_lazy as _
 from django.views import View
 from django.views.decorators.clickjacking import xframe_options_exempt
 from django.views.decorators.csrf import csrf_exempt
-from requests import RequestException
-
 from pretix.base.models import Order, OrderPayment, Quota
-from pretix.base.payment import PaymentException
 from pretix.multidomain.urlreverse import build_absolute_uri, eventreverse
+from requests import RequestException
 
 from .api_client import PaymentStatusSimple, SecuconnectException
 
@@ -108,7 +105,7 @@ class ReturnView(SecuconnectOrderView, View):
                     smart_transaction["transactions"][0]["id"]
                 )
                 info["payment_transaction"] = payment_transaction
-        except (RequestException, SecuconnectException) as ex:
+        except (RequestException, SecuconnectException):
             messages.error(
                 self.request,
                 _(

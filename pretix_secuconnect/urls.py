@@ -1,6 +1,6 @@
 from django.urls import include, path
-
 from pretix.multidomain import event_path
+
 from .views import ReturnView, WebhookView, redirect_view
 
 event_patterns = [

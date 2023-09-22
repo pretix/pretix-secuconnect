@@ -1,7 +1,7 @@
 import logging
 import requests
 from enum import Enum
-from requests import HTTPError, RequestException
+from requests import RequestException
 
 logger = logging.getLogger(__name__)
 

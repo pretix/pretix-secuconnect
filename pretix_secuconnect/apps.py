@@ -21,6 +21,7 @@ class PluginApp(PluginConfig):
         version = __version__
         category = "PAYMENT"
         compatibility = "pretix>=4.20.0"
+        picture = "pretix_secuconnect/logo.png"
 
     def ready(self):
         from . import signals  # NOQA

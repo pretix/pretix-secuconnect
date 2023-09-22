@@ -361,7 +361,6 @@ class SecuconnectMethod(BasePaymentProvider):
         if ia.company:
             customer["companyname"] = ia.company[:50]
 
-        print("Invoice address", ia.__dict__)
         if ia.name_parts.get("salutation"):
             customer["salutation"] = ia.name_parts.get("salutation", "")[:10]
         if ia.name_parts.get("title"):
@@ -442,8 +441,6 @@ class SecuconnectMethod(BasePaymentProvider):
         payment.info_data = {"smart_transaction": data, "payment_transaction": None}
         payment.save(update_fields=["info"])
         request.session["payment_secuconnect_order_secret"] = payment.order.secret
-        print("secuconnect success...")
-        print("Response:", data)
 
         try:
             redirect_url = data["payment_links"][self.method]

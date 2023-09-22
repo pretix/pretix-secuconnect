@@ -1,23 +1,21 @@
-from django.utils.translation import gettext as _
-
 from django.dispatch import receiver
-
+from django.utils.translation import gettext as _
 from pretix.base.signals import logentry_display, register_payment_providers
 
 
 @receiver(register_payment_providers, dispatch_uid="payment_secuconnect")
 def register_payment_provider(sender, **kwargs):
     from .payment import (
-        SecuconnectSettingsHolder,
         SecuconnectCC,
         SecuconnectDirectDebit,
-        SecuconnectPrepaid,
-        SecuconnectSofort,
         SecuconnectEasycredit,
         SecuconnectEPS,
         SecuconnectGiropay,
         SecuconnectInvoice,
         SecuconnectPaypal,
+        SecuconnectPrepaid,
+        SecuconnectSettingsHolder,
+        SecuconnectSofort,
     )
 
     return [

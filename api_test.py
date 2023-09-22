@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 import argparse
+import json
+import logging
 import os
 import pprint
-import logging
-import json
+
 
 class MyCache:
     def __init__(self):

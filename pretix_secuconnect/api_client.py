@@ -1,11 +1,9 @@
 import logging
-from enum import Enum
-
 import requests
 from django.utils.translation import gettext as _
-from requests import HTTPError, RequestException
-
+from enum import Enum
 from pretix.base.payment import PaymentException
+from requests import HTTPError, RequestException
 
 logger = logging.getLogger(__name__)
 
@@ -61,16 +59,28 @@ class SecuconnectAPIClient:
         logger.debug("Token from cache? %r", token)
         if not token:
             logger.debug("Requesting access token")
-            r = requests.post(
-                "{base}/oauth/token".format(base=self.api_base_url),
-                timeout=20,
-                json={
-                    "grant_type": "client_credentials",
-                    "client_id": self.client_id,
-                    "client_secret": self.client_secret,
-                },
-            )
-            r.raise_for_status()
+            try:
+                r = requests.post(
+                    "{base}/oauth/token".format(base=self.api_base_url),
+                    timeout=20,
+                    json={
+                        "grant_type": "client_credentials",
+                        "client_id": self.client_id,
+                        "client_secret": self.client_secret,
+                    },
+                )
+                r.raise_for_status()
+            except RequestException as e:
+                try:
+                    error_object = r.json()
+                except:
+                    error_object = {}
+                logger.exception("Failed to retrieve secuconnect access token (%r)", error_object)
+                raise PaymentException(_(
+                    "We had trouble communicating with secuconnect. Please try again and get in touch "
+                    "with us if this problem persists."
+                )) from e
+
             response = r.json()
             logger.debug("Response %r", response)
             token = response["access_token"]
@@ -101,12 +111,12 @@ class SecuconnectAPIClient:
             r.raise_for_status()
             return r.json()
         except HTTPError as e:
-            logger.exception("secuconnect API returned error: %s" % r.text)
             try:
                 error_object = r.json()
             except:
                 error_object = {}
-            if error_object['status'] == 'error' and 'error_details' in error_object:
+            logger.exception("secuconnect API returned error (%r)", error_object)
+            if error_object.get('status') == 'error' and 'error_details' in error_object:
                 raise SecuconnectException(error_object)
 
             raise PaymentException(_(
@@ -149,5 +159,5 @@ class SecuconnectException(PaymentException):
     def __init__(self, error_object):
         super().__init__(_(
                 "secuconnect reported an error: {}. Please try again and get in touch "
-                "with us if this problem persists.").format(error_details=error_object['error_details']))
+                "with us if this problem persists.").format(error_object['error_details']))
         self.error_object = error_object

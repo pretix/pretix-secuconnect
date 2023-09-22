@@ -3,20 +3,19 @@ import json
 import logging
 from collections import OrderedDict
 from decimal import Decimal
-
 from django import forms
 from django.conf import settings
 from django.core import signing
 from django.http import HttpRequest
 from django.template.loader import get_template
 from django.utils.translation import gettext, gettext_lazy as _, pgettext
-
 from pretix.base.decimal import round_decimal
 from pretix.base.forms import SecretKeySettingsField
 from pretix.base.models import Event, InvoiceAddress, Order, OrderPayment, OrderRefund
 from pretix.base.payment import BasePaymentProvider, PaymentException
 from pretix.base.settings import SettingsSandbox
 from pretix.multidomain.urlreverse import build_absolute_uri
+
 from .api_client import SecuconnectAPIClient, SecuconnectException
 
 logger = logging.getLogger(__name__)
@@ -45,6 +44,12 @@ class SecuconnectSettingsHolder(BasePaymentProvider):
                         ("testing", pgettext("secuconnect", "Testing")),
                         ("showcase", pgettext("secuconnect", "Showcase")),
                     ),
+                ),
+            ),
+            (
+                "is_demo",
+                forms.BooleanField(
+                    label=_("Demo Mode"),
                 ),
             ),
             (
@@ -274,6 +279,7 @@ class SecuconnectMethod(BasePaymentProvider):
         return (
             self.settings.environment == "testing"
             or self.settings.environment == "showcase"
+            or self.settings.is_demo
         )
 
     def _amount_to_decimal(self, cents):
@@ -343,7 +349,7 @@ class SecuconnectMethod(BasePaymentProvider):
     def _build_smart_transaction_init_body(self, payment):
         customer = self._build_customer_info(payment.order)
         b = {
-            "is_demo": True,  # self.is_test_mode
+            "is_demo": self.settings.get('is_demo', as_type=bool),  # self.is_test_mode
             "contract": {"id": self.settings.contract_id},
             "customer": {"contact": customer} if customer else {},
             "intent": "sale",
@@ -397,7 +403,11 @@ class SecuconnectMethod(BasePaymentProvider):
         print("secuconnect success...")
         print("Response:", data)
 
-        return self.redirect(request, data.get("payment_links").get(self.method))
+        try:
+            redirect_url = data["payment_links"][self.method]
+        except KeyError:
+            raise PaymentException(_("Requested payment method not supported."))
+        return self.redirect(request, redirect_url)
 
     def redirect(self, request: HttpRequest, url):
         if request.session.get("iframe_session", False):

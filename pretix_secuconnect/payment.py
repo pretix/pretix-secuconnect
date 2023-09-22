@@ -159,12 +159,13 @@ class SecuconnectMethod(BasePaymentProvider):
         super().__init__(event)
         self.settings = SettingsSandbox("payment", "secuconnect", event)
         self.cache = self.event.cache
-        self.client = SecuconnectAPIClient(
-            cache=self.cache,
-            environment=self.settings.get("environment"),
-            client_id=self.settings.get("client_id"),
-            client_secret=self.settings.get("client_secret"),
-        )
+        if self.settings.get("environment"):
+            self.client = SecuconnectAPIClient(
+                cache=self.cache,
+                environment=self.settings.get("environment"),
+                client_id=self.settings.get("client_id"),
+                client_secret=self.settings.get("client_secret"),
+            )
 
     @property
     def settings_form_fields(self):

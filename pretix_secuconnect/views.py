@@ -102,9 +102,12 @@ class ReturnView(SecuconnectOrderView, View):
             smart_transaction = self.pprov.client.fetch_smart_transaction_info(
                 transaction_id
             )
-            payment_transaction = self.pprov.client.fetch_payment_transaction_info(
-                smart_transaction["transactions"][0]["id"]
-            )
+            info["smart_transaction"] = smart_transaction
+            if smart_transaction["transactions"]:
+                payment_transaction = self.pprov.client.fetch_payment_transaction_info(
+                    smart_transaction["transactions"][0]["id"]
+                )
+                info["payment_transaction"] = payment_transaction
         except (RequestException, SecuconnectException) as ex:
             messages.error(
                 self.request,
@@ -115,8 +118,6 @@ class ReturnView(SecuconnectOrderView, View):
             )
             return self._redirect_to_order()
 
-        info["smart_transaction"] = smart_transaction
-        info["payment_transaction"] = payment_transaction
         if kwargs.get("action") == "success":
             self.payment.info_data = info
             if smart_transaction["status"] == "ok":

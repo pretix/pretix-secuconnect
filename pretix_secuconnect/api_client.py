@@ -7,12 +7,13 @@ from requests import HTTPError, RequestException
 
 logger = logging.getLogger(__name__)
 
+
 class PaymentStatusSimple(Enum):
     PROCEED = 0
     """Initial status of every transaction. The payment is not authorised, nor wanted to capture."""
     ACCEPTED = 1
-    """The request for capture or for invoice payment was accepted. You can deliver now. 
-    (When you use invoice payment, you need to add the partial deliveries, and to request the capture along 
+    """The request for capture or for invoice payment was accepted. You can deliver now.
+    (When you use invoice payment, you need to add the partial deliveries, and to request the capture along
     with your final delivery.)"""
     AUTHORIZED = 2
     """The payment is authorised, but was not requested to capture yet."""
@@ -30,8 +31,8 @@ class PaymentStatusSimple(Enum):
     PAID = 9
     """We have received the invoice payment."""
     PENDING = 10
-    """The payment was requested to capture, but you must wait with delivery for status accepted. This status is 
-    always set when we wait for the advance payment. It is also used with other payment methods to perform an 
+    """The payment was requested to capture, but you must wait with delivery for status accepted. This status is
+    always set when we wait for the advance payment. It is also used with other payment methods to perform an
     additional risk check."""
     SUBSCRIPTION_APPROVED = 11
     """The transaction used to authorise further payments has been approved."""
@@ -42,7 +43,6 @@ class PaymentStatusSimple(Enum):
 
 
 class SecuconnectAPIClient:
-
     def __init__(self, cache, environment, client_id, client_secret):
         self.environment = environment
         self.cache = cache
@@ -73,13 +73,17 @@ class SecuconnectAPIClient:
             except RequestException as e:
                 try:
                     error_object = r.json()
-                except:
+                except:  # noqa
                     error_object = {}
-                logger.exception("Failed to retrieve secuconnect access token (%r)", error_object)
-                raise PaymentException(_(
-                    "We had trouble communicating with secuconnect. Please try again and get in touch "
-                    "with us if this problem persists."
-                )) from e
+                logger.exception(
+                    "Failed to retrieve secuconnect access token (%r)", error_object
+                )
+                raise PaymentException(
+                    _(
+                        "We had trouble communicating with secuconnect. Please try again and get in touch "
+                        "with us if this problem persists."
+                    )
+                ) from e
 
             response = r.json()
             logger.debug("Response %r", response)
@@ -92,11 +96,11 @@ class SecuconnectAPIClient:
     def _post(self, endpoint, *args, **kwargs):
         logger.debug("Sending secuconnect API POST request")
         logger.debug("endpoint: %r", endpoint)
-        logger.debug("body:     %r", kwargs.get('json'))
-        return self._perform_request('POST', endpoint, *args, **kwargs)
+        logger.debug("body:     %r", kwargs.get("json"))
+        return self._perform_request("POST", endpoint, *args, **kwargs)
 
     def _get(self, endpoint, *args, **kwargs):
-        return self._perform_request('GET', endpoint, *args, **kwargs)
+        return self._perform_request("GET", endpoint, *args, **kwargs)
 
     def _perform_request(self, method, endpoint, *args, **kwargs):
         try:
@@ -113,28 +117,35 @@ class SecuconnectAPIClient:
         except HTTPError as e:
             try:
                 error_object = r.json()
-            except:
+            except:  # noqa
                 error_object = {}
             logger.exception("secuconnect API returned error (%r)", error_object)
-            if error_object.get('status') == 'error' and 'error_details' in error_object:
+            if (
+                error_object.get("status") == "error"
+                and "error_details" in error_object
+            ):
                 raise SecuconnectException(error_object)
 
-            raise PaymentException(_(
-                "We had trouble communicating with secuconnect. Please try again and get in touch "
-                "with us if this problem persists."
-            )) from e
+            raise PaymentException(
+                _(
+                    "We had trouble communicating with secuconnect. Please try again and get in touch "
+                    "with us if this problem persists."
+                )
+            ) from e
         except RequestException as e:
             logger.exception("secuconnect API request failed")
-            raise PaymentException(_(
-                "We had trouble communicating with secuconnect. Please try again and get in touch "
-                "with us if this problem persists."
-            )) from e
+            raise PaymentException(
+                _(
+                    "We had trouble communicating with secuconnect. Please try again and get in touch "
+                    "with us if this problem persists."
+                )
+            ) from e
 
     def fetch_smart_transaction_info(self, transaction_id):
-        return self._get('v2/Smart/Transactions/{}'.format(transaction_id))
+        return self._get("v2/Smart/Transactions/{}".format(transaction_id))
 
     def fetch_payment_transaction_info(self, transaction_id):
-        return self._get('v2/Payment/Transactions/{}'.format(transaction_id))
+        return self._get("v2/Payment/Transactions/{}".format(transaction_id))
 
     def start_smart_transaction(self, body):
         return self._post("v2/Smart/Transactions", json=body)
@@ -157,7 +168,10 @@ class SecuconnectException(PaymentException):
     """
 
     def __init__(self, error_object):
-        super().__init__(_(
+        super().__init__(
+            _(
                 "secuconnect reported an error: {}. Please try again and get in touch "
-                "with us if this problem persists.").format(error_object['error_details']))
+                "with us if this problem persists."
+            ).format(error_object["error_details"])
+        )
         self.error_object = error_object

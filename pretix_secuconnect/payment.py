@@ -145,7 +145,11 @@ class SecuconnectMethod(BasePaymentProvider):
     payment_methods = []
 
     allow_business = True
-    required_customer_info = ("forename", "surname", "email",)
+    required_customer_info = (
+        "forename",
+        "surname",
+        "email",
+    )
     checkout_template_id = "COT_WD0DE66HN2XWJHW8JM88003YG0NEA2"
 
     def __init__(self, event: Event):
@@ -185,12 +189,16 @@ class SecuconnectMethod(BasePaymentProvider):
     def payment_is_valid_session(self, request: HttpRequest):
         return True
 
-    def payment_form_render(self, request: HttpRequest, total: Decimal, order: Order=None) -> str:
+    def payment_form_render(
+        self, request: HttpRequest, total: Decimal, order: Order = None
+    ) -> str:
         template = get_template("pretix_secuconnect/checkout_payment_form.html")
         ctx = {"request": request, "event": self.event, "settings": self.settings}
         return template.render(ctx)
 
-    def checkout_confirm_render(self, request: HttpRequest, order: Order=None, info_data: dict=None) -> str:
+    def checkout_confirm_render(
+        self, request: HttpRequest, order: Order = None, info_data: dict = None
+    ) -> str:
         template = get_template("pretix_secuconnect/checkout_payment_confirm.html")
         ctx = {
             "request": request,
@@ -244,21 +252,35 @@ class SecuconnectMethod(BasePaymentProvider):
     def api_payment_details(self, payment: OrderPayment):
         payment_info = payment.info_data
         return {
-            "id": payment_info.get('smart_transaction', {}).get('id'),
-            "status": (payment_info.get('payment_transaction', {}).get('details', {}).get('status_simple_text') or
-                       payment_info.get('smart_transaction', {}).get('status')),
-            "payment_method": payment_info.get('smart_transaction', {}).get('payment_method'),
-            "payment_instructions": payment_info.get('smart_transaction', {}).get('payment_instructions'),
-            "payment_context": payment_info.get('smart_transaction', {}).get('payment_context'),
-            "payment_transaction_status_string": payment_info.get('payment_transaction', {}).get('status_text'),
-            "payment_transaction_id": payment_info.get('payment_transaction', {}).get('id'),
+            "id": payment_info.get("smart_transaction", {}).get("id"),
+            "status": (
+                payment_info.get("payment_transaction", {})
+                .get("details", {})
+                .get("status_simple_text")
+                or payment_info.get("smart_transaction", {}).get("status")
+            ),
+            "payment_method": payment_info.get("smart_transaction", {}).get(
+                "payment_method"
+            ),
+            "payment_instructions": payment_info.get("smart_transaction", {}).get(
+                "payment_instructions"
+            ),
+            "payment_context": payment_info.get("smart_transaction", {}).get(
+                "payment_context"
+            ),
+            "payment_transaction_status_string": payment_info.get(
+                "payment_transaction", {}
+            ).get("status_text"),
+            "payment_transaction_id": payment_info.get("payment_transaction", {}).get(
+                "id"
+            ),
         }
 
     def execute_refund(self, refund: OrderRefund):
         try:
             self.client.cancel_payment_transaction(
                 refund.payment.info_data["payment_transaction"]["id"],
-                self._decimal_to_int(refund.amount)
+                self._decimal_to_int(refund.amount),
             )
         except SecuconnectException as ex:
             refund.info_data = ex.error_object
@@ -349,7 +371,7 @@ class SecuconnectMethod(BasePaymentProvider):
     def _build_smart_transaction_init_body(self, payment):
         customer = self._build_customer_info(payment.order)
         b = {
-            "is_demo": self.settings.get('is_demo', as_type=bool),  # self.is_test_mode
+            "is_demo": self.settings.get("is_demo", as_type=bool),  # self.is_test_mode
             "contract": {"id": self.settings.contract_id},
             "customer": {"contact": customer} if customer else {},
             "intent": "sale",
@@ -357,9 +379,8 @@ class SecuconnectMethod(BasePaymentProvider):
                 "products": [
                     {
                         "id": 1,
-                        "desc": gettext('Order {order} for {event}').format(
-                            event=payment.order.event.name,
-                            order=payment.order.code
+                        "desc": gettext("Order {order} for {event}").format(
+                            event=payment.order.event.name, order=payment.order.code
                         ),
                         "priceOne": self._decimal_to_int(payment.amount),
                         "quantity": 1,
@@ -389,7 +410,9 @@ class SecuconnectMethod(BasePaymentProvider):
 
     def execute_payment(self, request: HttpRequest, payment: OrderPayment):
         try:
-            data = self.client.start_smart_transaction(self._build_smart_transaction_init_body(payment))
+            data = self.client.start_smart_transaction(
+                self._build_smart_transaction_init_body(payment)
+            )
         except SecuconnectException as ex:
             payment.fail(log_data=ex.error_object)
             raise
@@ -397,8 +420,8 @@ class SecuconnectMethod(BasePaymentProvider):
             payment.fail(log_data={"error": True, "detail": str(ex)})
             raise
 
-        payment.info_data = {'smart_transaction': data, 'payment_transaction': None}
-        payment.save(update_fields=['info'])
+        payment.info_data = {"smart_transaction": data, "payment_transaction": None}
+        payment.save(update_fields=["info"])
         request.session["payment_secuconnect_order_secret"] = payment.order.secret
         print("secuconnect success...")
         print("Response:", data)
@@ -451,7 +474,12 @@ class SecuconnectDirectDebit(SecuconnectMethod):
     method = "debit"
     verbose_name = _("SEPA Direct Debit via secuconnect")
     public_name = _("SEPA Direct Debit")
-    required_customer_info = ("forename", "surname", "address", "email",)
+    required_customer_info = (
+        "forename",
+        "surname",
+        "address",
+        "email",
+    )
     # ...address only required if payment guarantee/scoring contracted
 
 
@@ -465,14 +493,24 @@ class SecuconnectSofort(SecuconnectMethod):
     method = "sofort"
     verbose_name = _("SOFORT via secuconnect")
     public_name = _("SOFORT")
-    required_customer_info = ("forename", "surname", "address", "email",)
+    required_customer_info = (
+        "forename",
+        "surname",
+        "address",
+        "email",
+    )
 
 
 class SecuconnectEasycredit(SecuconnectMethod):
     method = "easycredit"
     verbose_name = _("easycredit via secuconnect")
     public_name = _("easycredit")
-    required_customer_info = ("forename", "surname", "address", "email",)
+    required_customer_info = (
+        "forename",
+        "surname",
+        "address",
+        "email",
+    )
     allow_business = False
     checkout_template_id = "COT_3DP70FK5H2XP02TCVQ28000NG095A2"
 
@@ -493,7 +531,12 @@ class SecuconnectInvoice(SecuconnectMethod):
     method = "invoice"
     verbose_name = _("Invoice via secuconnect")
     public_name = _("Invoice")
-    required_customer_info = ("forename", "surname", "address", "email",)
+    required_customer_info = (
+        "forename",
+        "surname",
+        "address",
+        "email",
+    )
     # ...address only required if payment guarantee/scoring contracted
 
 
@@ -503,5 +546,3 @@ class SecuconnectPaypal(SecuconnectMethod):
     public_name = _("PayPal")
     # required_customer_info = ("forename", "surname", "address", "email",)
     # ...address only required for physical shipment
-
-

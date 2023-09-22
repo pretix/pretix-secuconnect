@@ -87,33 +87,43 @@ class SecuconnectOrderView:
 class ReturnView(SecuconnectOrderView, View):
     def get(self, request: HttpRequest, *args, **kwargs):
         info = self.payment.info_data
-        transaction_id = info['smart_transaction']['id']
+        transaction_id = info["smart_transaction"]["id"]
         if self.payment.state != OrderPayment.PAYMENT_STATE_CREATED:
-            logger.warning("%s: secuconnect return URL was accessed in incorrect payment state", transaction_id)
+            logger.warning(
+                "%s: secuconnect return URL was accessed in incorrect payment state",
+                transaction_id,
+            )
             return self._redirect_to_order()
 
         try:
-            smart_transaction = self.pprov.client.fetch_smart_transaction_info(transaction_id)
-            payment_transaction = self.pprov.client.fetch_payment_transaction_info(smart_transaction['transactions'][0]['id'])
+            smart_transaction = self.pprov.client.fetch_smart_transaction_info(
+                transaction_id
+            )
+            payment_transaction = self.pprov.client.fetch_payment_transaction_info(
+                smart_transaction["transactions"][0]["id"]
+            )
         except PaymentException as ex:
             messages.error(self.request, str(ex))
             return self._redirect_to_order()
 
-        info['smart_transaction'] = smart_transaction
-        info['payment_transaction'] = payment_transaction
+        info["smart_transaction"] = smart_transaction
+        info["payment_transaction"] = payment_transaction
         if kwargs.get("action") == "success":
             self.payment.info_data = info
-            if smart_transaction['status'] == 'ok':
+            if smart_transaction["status"] == "ok":
                 try:
                     self.payment.confirm()
                 except Quota.QuotaExceededException:
                     pass
-            elif smart_transaction['status'] == 'pending':
+            elif smart_transaction["status"] == "pending":
                 self.payment.state = OrderPayment.PAYMENT_STATE_PENDING
                 self.payment.save(update_fields=["state", "info"])
             else:
-                logger.error("%s: Unexpected payment state '%r' reported by secuconnect - failing payment",
-                             transaction_id, smart_transaction['status'])
+                logger.error(
+                    "%s: Unexpected payment state '%r' reported by secuconnect - failing payment",
+                    transaction_id,
+                    smart_transaction["status"],
+                )
                 self.payment.fail(log_data=smart_transaction, info=info)
         elif kwargs.get("action") == "fail":
             self.payment.fail(log_data=smart_transaction, info=info)
@@ -134,8 +144,8 @@ class ReturnView(SecuconnectOrderView, View):
     def _redirect_to_order(self):
         self.order.refresh_from_db()
         if (
-                self.request.session.get("payment_secuconnect_order_secret")
-                != self.order.secret
+            self.request.session.get("payment_secuconnect_order_secret")
+            != self.order.secret
         ):
             messages.error(
                 self.request,
@@ -156,30 +166,41 @@ class ReturnView(SecuconnectOrderView, View):
         )
 
 
-@method_decorator(csrf_exempt, 'dispatch')
+@method_decorator(csrf_exempt, "dispatch")
 class WebhookView(SecuconnectOrderView, View):
     def post(self, request: HttpRequest, *args, **kwargs):
         json_body = json.loads(request.body)
-        for event_object in json_body['data']:
-            if event_object['object'] == 'payment.transactions':
-                self._handle_payment_transaction_update(event_object['id'])
+        for event_object in json_body["data"]:
+            if event_object["object"] == "payment.transactions":
+                self._handle_payment_transaction_update(event_object["id"])
             else:
-                logger.warning("secuconnect notified us of unknown object type change %r", event_object)
+                logger.warning(
+                    "secuconnect notified us of unknown object type change %r",
+                    event_object,
+                )
         return HttpResponse("ok")
 
     def _handle_payment_transaction_update(self, id):
-        payment_transaction_details = self.pprov.client.fetch_payment_transaction_info(id)
+        payment_transaction_details = self.pprov.client.fetch_payment_transaction_info(
+            id
+        )
 
         info = self.payment.info_data
-        status = PaymentStatusSimple(payment_transaction_details['details']['status_simple'])
-        if info['payment_transaction']:
-            old_status = PaymentStatusSimple(info['payment_transaction']['details']['status_simple'])
+        status = PaymentStatusSimple(
+            payment_transaction_details["details"]["status_simple"]
+        )
+        if info["payment_transaction"]:
+            old_status = PaymentStatusSimple(
+                info["payment_transaction"]["details"]["status_simple"]
+            )
             if old_status == status:
-                logging.info("%s: Transaction status update already processed, ignoring", id)
+                logging.info(
+                    "%s: Transaction status update already processed, ignoring", id
+                )
                 return
         else:
             old_status = None
-        info['payment_transaction'] = payment_transaction_details
+        info["payment_transaction"] = payment_transaction_details
         logging.info("%s: Transaction status update (%s -> %s)", id, old_status, status)
 
         if status == PaymentStatusSimple.ACCEPTED:
@@ -188,15 +209,24 @@ class WebhookView(SecuconnectOrderView, View):
                 self.payment.confirm()
             except Quota.QuotaExceededException:
                 pass
-        elif status == PaymentStatusSimple.PENDING and self.payment.state == OrderPayment.PAYMENT_STATE_CREATED:
+        elif (
+            status == PaymentStatusSimple.PENDING
+            and self.payment.state == OrderPayment.PAYMENT_STATE_CREATED
+        ):
             self.payment.info_data = info
             self.payment.state = OrderPayment.PAYMENT_STATE_PENDING
             self.payment.save(update_fields=["state", "info"])
-        elif status == PaymentStatusSimple.DENIED and self.payment.state in (OrderPayment.PAYMENT_STATE_CREATED, OrderPayment.PAYMENT_STATE_PENDING):
+        elif status == PaymentStatusSimple.DENIED and self.payment.state in (
+            OrderPayment.PAYMENT_STATE_CREATED,
+            OrderPayment.PAYMENT_STATE_PENDING,
+        ):
             self.payment.fail(info=info)
         else:
-            logger.warning("%s: Unexpected payment state '%r' reported by secuconnect",
-                           id, payment_transaction_details['details'])
+            logger.warning(
+                "%s: Unexpected payment state '%r' reported by secuconnect",
+                id,
+                payment_transaction_details["details"],
+            )
             self.payment.info_data = info
             self.payment.save(update_fields=["state", "info"])
 
@@ -208,4 +238,3 @@ class WebhookView(SecuconnectOrderView, View):
                 "new_status": str(status),
             },
         )
-

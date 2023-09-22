@@ -35,5 +35,6 @@ def register_payment_provider(sender, **kwargs):
 @receiver(signal=logentry_display, dispatch_uid="secuconnect_logentry_display")
 def pretixcontrol_logentry_display(sender, logentry, **kwargs):
     if logentry.action_type == "pretix_secuconnect.event.status_update":
-        return _("secuconnect reported a status update: {}").format(logentry.parsed_data.get('new_status'))
-
+        return _("secuconnect reported a status update: {}").format(
+            logentry.parsed_data.get("new_status")
+        )

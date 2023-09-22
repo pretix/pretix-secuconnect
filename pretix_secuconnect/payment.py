@@ -3,6 +3,8 @@ import json
 import logging
 from collections import OrderedDict
 from decimal import Decimal
+from typing import Union
+
 from django import forms
 from django.conf import settings
 from django.core import signing
@@ -282,10 +284,18 @@ class SecuconnectMethod(BasePaymentProvider):
 
     def execute_refund(self, refund: OrderRefund):
         try:
-            self.client.cancel_payment_transaction(
-                refund.payment.info_data["payment_transaction"]["id"],
+            info = refund.payment.info_data
+            transactions = self.client.cancel_payment_transaction(
+                info["payment_transaction"]["id"],
                 self._decimal_to_int(refund.amount),
             )
+            for transaction in transactions:
+                if transaction["id"] == info["payment_transaction"]["id"]:
+                    info["payment_transaction"] = transaction
+                    refund.payment.info_data = info
+                    refund.payment.save(update_fields=["info"])
+                else:
+                    refund.info_data = transaction
         except SecuconnectException as ex:
             refund.info_data = ex.error_object
             raise PaymentException(
@@ -295,10 +305,12 @@ class SecuconnectMethod(BasePaymentProvider):
                 )
             )
         except RequestException:
-            raise PaymentException(_(
-                        "We had trouble communicating with secuconnect. Please try again and get in touch "
-                        "with us if this problem persists."
-                    ))
+            raise PaymentException(
+                _(
+                    "We had trouble communicating with secuconnect. Please try again and get in touch "
+                    "with us if this problem persists."
+                )
+            )
         else:
             refund.done()
 
@@ -428,16 +440,20 @@ class SecuconnectMethod(BasePaymentProvider):
             )
         except SecuconnectException as ex:
             payment.fail(log_data=ex.error_object)
-            raise PaymentException(_(
-                        "We had trouble communicating with secuconnect. Please try again and get in touch "
-                        "with us if this problem persists."
-                    ))
+            raise PaymentException(
+                _(
+                    "We had trouble communicating with secuconnect. Please try again and get in touch "
+                    "with us if this problem persists."
+                )
+            )
         except RequestException as ex:
             payment.fail(log_data={"error_details": str(ex)})
-            raise PaymentException(_(
-                        "We had trouble communicating with secuconnect. Please try again and get in touch "
-                        "with us if this problem persists."
-                    ))
+            raise PaymentException(
+                _(
+                    "We had trouble communicating with secuconnect. Please try again and get in touch "
+                    "with us if this problem persists."
+                )
+            )
 
         payment.info_data = {"smart_transaction": data, "payment_transaction": None}
         payment.save(update_fields=["info"])
@@ -446,8 +462,12 @@ class SecuconnectMethod(BasePaymentProvider):
         try:
             redirect_url = data["payment_links"][self.method]
         except KeyError:
-            raise PaymentException(_("Requested payment method not supported. Please get in touch "
-                        "with us if this problem persists."))
+            raise PaymentException(
+                _(
+                    "Requested payment method not supported. Please get in touch "
+                    "with us if this problem persists."
+                )
+            )
         return self.redirect(request, redirect_url)
 
     def redirect(self, request: HttpRequest, url):
@@ -470,15 +490,17 @@ class SecuconnectMethod(BasePaymentProvider):
         else:
             return str(url)
 
-    def shred_payment_info(self, obj: OrderPayment):
+    def shred_payment_info(self, obj: Union[OrderPayment, OrderRefund]):
         if not obj.info:
             return
-        d = json.loads(obj.info)
-        if "details" in d:
-            d["details"] = {k: "█" for k in d["details"].keys()}
+        d = obj.info_data
+        if d.get("payment_transaction"):
+            d["payment_transaction"]["payment_data"] = "█"
+        if d.get("payment_data"):
+            d["payment_data"] = "█"
 
         d["_shredded"] = True
-        obj.info = json.dumps(d)
+        obj.info_data = d
         obj.save(update_fields=["info"])
 
 

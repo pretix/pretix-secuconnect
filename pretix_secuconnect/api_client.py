@@ -1,8 +1,6 @@
 import logging
 import requests
-from django.utils.translation import gettext as _
 from enum import Enum
-from pretix.base.payment import PaymentException
 from requests import HTTPError, RequestException
 
 logger = logging.getLogger(__name__)
@@ -74,16 +72,11 @@ class SecuconnectAPIClient:
                 try:
                     error_object = r.json()
                 except:  # noqa
-                    error_object = {}
+                    error_object = {'exception': str(e)}
                 logger.exception(
                     "Failed to retrieve secuconnect access token (%r)", error_object
                 )
-                raise PaymentException(
-                    _(
-                        "We had trouble communicating with secuconnect. Please try again and get in touch "
-                        "with us if this problem persists."
-                    )
-                ) from e
+                raise
 
             response = r.json()
             logger.debug("Response %r", response)
@@ -103,22 +96,23 @@ class SecuconnectAPIClient:
         return self._perform_request("GET", endpoint, *args, **kwargs)
 
     def _perform_request(self, method, endpoint, *args, **kwargs):
+        auth_token = self._get_auth_token()
         try:
             r = requests.request(
                 method,
                 "{base}/api/{ep}".format(base=self.api_base_url, ep=endpoint),
-                headers={"Authorization": "Bearer " + self._get_auth_token()},
+                headers={"Authorization": "Bearer " + auth_token},
                 timeout=20,
                 *args,
                 **kwargs
             )
             r.raise_for_status()
             return r.json()
-        except HTTPError as e:
+        except RequestException as e:
             try:
                 error_object = r.json()
             except:  # noqa
-                error_object = {}
+                error_object = {'exception': str(e)}
             logger.exception("secuconnect API returned error (%r)", error_object)
             if (
                 error_object.get("status") == "error"
@@ -126,26 +120,18 @@ class SecuconnectAPIClient:
             ):
                 raise SecuconnectException(error_object)
 
-            raise PaymentException(
-                _(
-                    "We had trouble communicating with secuconnect. Please try again and get in touch "
-                    "with us if this problem persists."
-                )
-            ) from e
-        except RequestException as e:
-            logger.exception("secuconnect API request failed")
-            raise PaymentException(
-                _(
-                    "We had trouble communicating with secuconnect. Please try again and get in touch "
-                    "with us if this problem persists."
-                )
-            ) from e
+            raise
 
     def fetch_smart_transaction_info(self, transaction_id):
         return self._get("v2/Smart/Transactions/{}".format(transaction_id))
 
     def fetch_payment_transaction_info(self, transaction_id):
         return self._get("v2/Payment/Transactions/{}".format(transaction_id))
+
+    def fetch_payment_transaction_status(self, transaction_id):
+        return self._get(
+            "v2/Payment/Transactions/{}/checkStatus".format(transaction_id)
+        )
 
     def start_smart_transaction(self, body):
         return self._post("v2/Smart/Transactions", json=body)
@@ -156,22 +142,23 @@ class SecuconnectAPIClient:
             json={"reduce_amount_by": reduce_amount_by},
         )
 
+    def set_payment_transaction_status_for_test(self, transaction_id, method, new_status):
+        return self._post(
+            "v2/Payment/Secupay{}/{}/TestChangedPaymentStatus".format(method, transaction_id),
+            json={"new_status_id": new_status},
+        )
+
 
 class SmartTransaction:
     pass
 
 
-class SecuconnectException(PaymentException):
+class SecuconnectException:
     """
     Raised by the API client in case the secuconnect API returns an error object as defined in
     https://developer.secuconnect.com/integration/API_Errors_-_secuconnect_API.html
     """
 
     def __init__(self, error_object):
-        super().__init__(
-            _(
-                "secuconnect reported an error: {}. Please try again and get in touch "
-                "with us if this problem persists."
-            ).format(error_object["error_details"])
-        )
+        super().__init__(error_object["error_details"])
         self.error_object = error_object

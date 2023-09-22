@@ -9,6 +9,8 @@ from django.core import signing
 from django.http import HttpRequest
 from django.template.loader import get_template
 from django.utils.translation import gettext, gettext_lazy as _, pgettext
+from requests import RequestException
+
 from pretix.base.decimal import round_decimal
 from pretix.base.forms import SecretKeySettingsField
 from pretix.base.models import Event, InvoiceAddress, Order, OrderPayment, OrderRefund
@@ -50,6 +52,7 @@ class SecuconnectSettingsHolder(BasePaymentProvider):
                 "is_demo",
                 forms.BooleanField(
                     label=_("Demo Mode"),
+                    required=False,
                 ),
             ),
             (
@@ -284,7 +287,17 @@ class SecuconnectMethod(BasePaymentProvider):
             )
         except SecuconnectException as ex:
             refund.info_data = ex.error_object
-            raise
+            raise PaymentException(
+                _(
+                    "We had trouble communicating with secuconnect. Please try again and get in touch "
+                    "with us if this problem persists."
+                )
+            )
+        except RequestException:
+            raise PaymentException(_(
+                        "We had trouble communicating with secuconnect. Please try again and get in touch "
+                        "with us if this problem persists."
+                    ))
         else:
             refund.done()
 
@@ -304,7 +317,7 @@ class SecuconnectMethod(BasePaymentProvider):
             or self.settings.is_demo
         )
 
-    def _amount_to_decimal(self, cents):
+    def amount_to_decimal(self, cents):
         places = settings.CURRENCY_PLACES.get(self.event.currency, 2)
         return round_decimal(float(cents) / (10**places), self.event.currency)
 
@@ -415,10 +428,16 @@ class SecuconnectMethod(BasePaymentProvider):
             )
         except SecuconnectException as ex:
             payment.fail(log_data=ex.error_object)
-            raise
-        except PaymentException as ex:
-            payment.fail(log_data={"error": True, "detail": str(ex)})
-            raise
+            raise PaymentException(_(
+                        "We had trouble communicating with secuconnect. Please try again and get in touch "
+                        "with us if this problem persists."
+                    ))
+        except RequestException as ex:
+            payment.fail(log_data={"error_details": str(ex)})
+            raise PaymentException(_(
+                        "We had trouble communicating with secuconnect. Please try again and get in touch "
+                        "with us if this problem persists."
+                    ))
 
         payment.info_data = {"smart_transaction": data, "payment_transaction": None}
         payment.save(update_fields=["info"])
@@ -429,7 +448,8 @@ class SecuconnectMethod(BasePaymentProvider):
         try:
             redirect_url = data["payment_links"][self.method]
         except KeyError:
-            raise PaymentException(_("Requested payment method not supported."))
+            raise PaymentException(_("Requested payment method not supported. Please get in touch "
+                        "with us if this problem persists."))
         return self.redirect(request, redirect_url)
 
     def redirect(self, request: HttpRequest, url):

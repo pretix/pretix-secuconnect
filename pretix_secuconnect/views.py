@@ -2,6 +2,7 @@ import hashlib
 import json
 import logging
 import urllib
+
 from django.contrib import messages
 from django.core import signing
 from django.http import Http404, HttpRequest, HttpResponse, HttpResponseBadRequest
@@ -12,11 +13,13 @@ from django.utils.translation import gettext_lazy as _
 from django.views import View
 from django.views.decorators.clickjacking import xframe_options_exempt
 from django.views.decorators.csrf import csrf_exempt
+from requests import RequestException
+
 from pretix.base.models import Order, OrderPayment, Quota
 from pretix.base.payment import PaymentException
 from pretix.multidomain.urlreverse import build_absolute_uri, eventreverse
 
-from .api_client import PaymentStatusSimple
+from .api_client import PaymentStatusSimple, SecuconnectException
 
 logger = logging.getLogger(__name__)
 
@@ -102,8 +105,11 @@ class ReturnView(SecuconnectOrderView, View):
             payment_transaction = self.pprov.client.fetch_payment_transaction_info(
                 smart_transaction["transactions"][0]["id"]
             )
-        except PaymentException as ex:
-            messages.error(self.request, str(ex))
+        except (RequestException, SecuconnectException) as ex:
+            messages.error(self.request, _(
+                        "We had trouble communicating with secuconnect. Please try again and get in touch "
+                        "with us if this problem persists."
+                    ))
             return self._redirect_to_order()
 
         info["smart_transaction"] = smart_transaction
@@ -181,13 +187,13 @@ class WebhookView(SecuconnectOrderView, View):
         return HttpResponse("ok")
 
     def _handle_payment_transaction_update(self, id):
-        payment_transaction_details = self.pprov.client.fetch_payment_transaction_info(
+        transaction = self.pprov.client.fetch_payment_transaction_info(
             id
         )
 
         info = self.payment.info_data
         status = PaymentStatusSimple(
-            payment_transaction_details["details"]["status_simple"]
+            transaction["details"]["status_simple"]
         )
         if info["payment_transaction"]:
             old_status = PaymentStatusSimple(
@@ -200,7 +206,7 @@ class WebhookView(SecuconnectOrderView, View):
                 return
         else:
             old_status = None
-        info["payment_transaction"] = payment_transaction_details
+        info["payment_transaction"] = transaction
         logging.info("%s: Transaction status update (%s -> %s)", id, old_status, status)
 
         if status == PaymentStatusSimple.ACCEPTED:
@@ -221,11 +227,22 @@ class WebhookView(SecuconnectOrderView, View):
             OrderPayment.PAYMENT_STATE_PENDING,
         ):
             self.payment.fail(info=info)
+        elif (
+            status == PaymentStatusSimple.ISSUE
+            and self.payment.state == OrderPayment.PAYMENT_STATE_CONFIRMED
+        ):
+            payment_status = self.pprov.client.fetch_payment_transaction_status(id)
+            remaining_amount = self.pprov.amount_to_decimal(payment_status['amount'])
+            if remaining_amount < self.payment.amount:
+                self.payment.create_external_refund(
+                    info=json.dumps(transaction),
+                    amount=self.payment.amount - remaining_amount
+                )
         else:
             logger.warning(
                 "%s: Unexpected payment state '%r' reported by secuconnect",
                 id,
-                payment_transaction_details["details"],
+                transaction["details"],
             )
             self.payment.info_data = info
             self.payment.save(update_fields=["state", "info"])

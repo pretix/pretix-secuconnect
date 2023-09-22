@@ -44,14 +44,34 @@ parser_ptx.add_argument("id", type=str)
 parser_ptx.set_defaults(func=ptx_info)
 
 
+def ptx_status(args):
+    print_obj(client.fetch_payment_transaction_status(args.id))
+
+
+parser_ptx = subparsers.add_parser("ptx-checkstatus")
+parser_ptx.add_argument("id", type=str)
+parser_ptx.set_defaults(func=ptx_status)
+
+
 def ptx_cancel(args):
     print_obj(client.cancel_payment_transaction(args.id, args.amount))
 
 
-parser_ptx = subparsers.add_parser("ptx-cancel")
-parser_ptx.add_argument("id", type=str)
-parser_ptx.add_argument("amount", type=int)
-parser_ptx.set_defaults(func=ptx_cancel)
+parser_ptx_cancel = subparsers.add_parser("ptx-cancel")
+parser_ptx_cancel.add_argument("id", type=str)
+parser_ptx_cancel.add_argument("amount", type=int)
+parser_ptx_cancel.set_defaults(func=ptx_cancel)
+
+
+def ptx_forcestatus(args):
+    print_obj(client.set_payment_transaction_status_for_test(args.id, args.method, args.status))
+
+
+parser_ptx_forcestatus = subparsers.add_parser("ptx-forcestatus")
+parser_ptx_forcestatus.add_argument("id", type=str)
+parser_ptx_forcestatus.add_argument("method", type=str, choices=['debits', 'prepays', 'invoices', 'creditcards', 'sofort'])
+parser_ptx_forcestatus.add_argument("status", type=int)
+parser_ptx_forcestatus.set_defaults(func=ptx_forcestatus)
 
 
 args = parser.parse_args()

@@ -11,16 +11,17 @@ except ImportError:
 class PluginApp(PluginConfig):
     default = True
     name = "pretix_secuconnect"
-    verbose_name = "SecuConnect"
+    verbose_name = "secuconnect"
 
     class PretixPluginMeta:
-        name = gettext_lazy("SecuConnect")
+        name = gettext_lazy("secuconnect")
         author = "pretix team"
-        description = gettext_lazy("Accept payments through SecuConnect.")
+        description = gettext_lazy("Accept payments through secuconnect.")
         visible = True
         version = __version__
         category = "PAYMENT"
         compatibility = "pretix>=4.20.0"
+        picture = "pretix_secuconnect/logo.png"
 
     def ready(self):
         from . import signals  # NOQA

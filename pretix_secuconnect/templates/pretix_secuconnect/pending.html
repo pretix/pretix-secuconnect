@@ -1,0 +1,84 @@
+{% load i18n %}
+{% load ibanformat %}
+{% load money %}
+{% load dotdecimal %}
+{% load commadecimal %}
+
+{% if payment.state == "pending" %}
+    {% if payment_info.smart_transaction.payment_instructions %}
+
+        <p>{% blocktrans trimmed %}
+            Please transfer the full amount to the following bank account:
+        {% endblocktrans %}</p>
+
+        <div class="row">
+            <div class="col-md-6 col-xs-12">
+                <p>
+                    <strong>{% trans "Account holder" %}:</strong> {{ payment_info.smart_transaction.payment_instructions.owner }}<br>
+                    <strong>{% trans "IBAN" %}:</strong> {{ payment_info.smart_transaction.payment_instructions.iban|ibanformat }}<br>
+                    <strong>{% trans "BIC" %}:</strong> {{ payment_info.smart_transaction.payment_instructions.bic }}<br>
+                    <strong>{% trans "Bank name" %}:</strong> {{ payment_info.smart_transaction.payment_instructions.bankname }}<br>
+                    <strong>{% trans "Amount:" %}</strong> {{ payment.amount|money:event.currency }}<br/>
+                    <strong>{% trans "Reference code (important):" %} {{ payment_info.smart_transaction.payment_instructions.purpose }}</strong>
+                </p>
+                <p>
+                    {% trans "After you sent the bank transfer, you can close this window. We will send you an email as soon as we received your payment." %}
+                </p>
+            </div>
+            <div class="col-md-6 col-sm-6 hidden-xs text-center js-only blank-after">
+                <ul class="nav nav-tabs" id="banktransfer_qrcodes_tabs" role="tablist">
+                    <li class="active"><a href="#banktransfer_qrcodes_girocode" role="tab" id="banktransfer_qrcodes_girocode_tab" data-toggle="tab" aria-controls="banktransfer_qrcodes_girocode" aria-expanded="true">EPC-QR</a></li>
+                    <li><a href="#banktransfer_qrcodes_bezahlcode" role="tab" id="banktransfer_qrcodes_bezahlcode_tab" data-toggle="tab" aria-controls="banktransfer_qrcodes_bezahlcode" aria-expanded="false">BezahlCode</a></li>
+                </ul>
+                <div class="tab-content" id="banktransfer_qrcodes_tabs_content">
+                    <div id="banktransfer_qrcodes_girocode" class="tab-pane fade active in" role="tabpanel" aria-labelledby="banktransfer_qrcodes_girocode_tab">
+                        <p class="small">
+                            {% trans "Scan the qr-code with your banking app" %}
+                        </p>
+                        <p>
+                            <script type="text/plain" data-size="150" data-replace-with-qr>BCD
+002
+2
+SCT
+{{ payment_info.smart_transaction.payment_instructions.bic }}
+{{ payment_info.smart_transaction.payment_instructions.owner }}
+{{ payment_info.smart_transaction.payment_instructions.iban }}
+{{ event.currency }}{{ payment.amount|dotdecimal }}
+
+
+{{ payment_info.smart_transaction.payment_instructions.purpose }}
+
+                </script>
+                        </p>
+                    </div>
+                    <div id="banktransfer_qrcodes_bezahlcode" class="tab-pane fade" role="tabpanel" aria-labelledby="banktransfer_qrcodes_bezahlcode_tab">
+                        <p class="small">
+                            {% trans "Scan the qr-code with your banking app" %}
+                        </p>
+                        <p>
+                            <a aria-label="{% trans "Open BezahlCode in your banking app to start the payment process." %}" href="bank://singlepaymentsepa?name={{ payment_info.smart_transaction.payment_instructions.owner|urlencode }}&iban={{ payment_info.smart_transaction.payment_instructions.iban }}&bic={{ payment_info.smart_transaction.payment_instructions.bic }}&amount={{ payment.amount|commadecimal }}&reason={{ payment_info.smart_transaction.payment_instructions.purpose }}&currency={{ event.currency }}">
+                                <script type="text/plain" data-size="150" data-replace-with-qr>bank://singlepaymentsepa?name={{ payment_info.smart_transaction.payment_instructions.owner|urlencode }}&iban={{ payment_info.smart_transaction.payment_instructions.iban }}&bic={{ payment_info.smart_transaction.payment_instructions.bic }}&amount={{ payment.amount|commadecimal }}&reason={{ payment_info.smart_transaction.payment_instructions.purpose }}&currency={{ event.currency }}</script>
+                            </a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <p>{% blocktrans trimmed %}
+            We're waiting for an answer from the payment provider regarding your payment. Please contact us if this
+            takes more than a few days.
+        {% endblocktrans %}</p>
+    {% endif %}
+{% else %}
+    <p>{% blocktrans trimmed %}
+        The payment transaction could not be completed for the following reason:
+    {% endblocktrans %}
+        <br/>
+        {% if payment_info and payment_info.ErrorMessage %}
+            {{ payment_info.ErrorMessage }}
+        {% else %}
+            {% trans "Unknown reason" %}
+        {% endif %}
+    </p>
+{% endif %}

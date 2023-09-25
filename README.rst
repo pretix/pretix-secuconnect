@@ -1,9 +1,9 @@
-SecuConnect
+secuconnect
 ==========================
 
 This is a plugin for `pretix`_. 
 
-Accept payments through SecuConnect.
+Accept payments through secuconnect.
 
 Development setup
 -----------------

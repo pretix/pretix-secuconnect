@@ -1,0 +1,18 @@
+{% load i18n %}
+
+{% if payment_info %}
+    <dl class="dl-horizontal">
+        <dt>{% trans "ID" %}</dt>
+        <dd>{{ payment_info.smart_transaction.id }}</dd>
+        <dt>{% trans "Status" %}</dt>
+        <dd>{{ payment_info.smart_transaction.status }}</dd>
+        <dt>{% trans "Payment Method" %}</dt>
+        <dd>{{ payment_info.smart_transaction.payment_method }}</dd>
+        <dt>{% trans "Payment Data" %}</dt>
+        <dd>{{ payment_info.payment_transaction.payment_data }}</dd>
+        <dt>{% trans "Payment Transaction Status" %}</dt>
+        <dd>{{ payment_info.payment_transaction.status_text }}</dd>
+        <dt>{% trans "Payment Transaction ID" %}</dt>
+        <dd>{{ payment_info.payment_transaction.id }}</dd>
+    </dl>
+{% endif %}

@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-03-07 19:01+0100\n"
+"POT-Creation-Date: 2023-10-26 14:47+0200\n"
 "PO-Revision-Date: \n"
 "Last-Translator: pretix team\n"
 "Language-Team: \n"
@@ -10,3 +10,305 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Poedit 3.3.2\n"
+
+#: pretix_secuconnect/apps.py:17 pretix_secuconnect/payment.py:29
+msgid "secuconnect"
+msgstr "secuconnect"
+
+#: pretix_secuconnect/apps.py:19
+msgid "Accept payments through secuconnect."
+msgstr "Akzeptieren Sie Zahlungen mit secuconnect."
+
+#: pretix_secuconnect/payment.py:43
+msgid "Environment"
+msgstr "Umgebung"
+
+#: pretix_secuconnect/payment.py:46
+msgctxt "secuconnect"
+msgid "Production"
+msgstr "Produktion"
+
+#: pretix_secuconnect/payment.py:47
+msgctxt "secuconnect"
+msgid "Testing"
+msgstr "Test"
+
+#: pretix_secuconnect/payment.py:48
+msgctxt "secuconnect"
+msgid "Showcase"
+msgstr "Showcase"
+
+#: pretix_secuconnect/payment.py:55
+msgid "Demo Mode"
+msgstr "Demo-Modus"
+
+#: pretix_secuconnect/payment.py:62
+msgid "OAuth Client ID"
+msgstr "OAuth-Client-ID"
+
+#: pretix_secuconnect/payment.py:68
+msgid "OAuth Client Secret"
+msgstr "OAuth-Client-Secret"
+
+#: pretix_secuconnect/payment.py:74
+msgid "Merchant Contract ID"
+msgstr "Händler-Vertrags-ID"
+
+#: pretix_secuconnect/payment.py:84
+msgid "Credit Card"
+msgstr "Kreditkarte"
+
+#: pretix_secuconnect/payment.py:91 pretix_secuconnect/payment.py:515
+msgid "SEPA Direct Debit"
+msgstr "SEPA-Lastschrift"
+
+#: pretix_secuconnect/payment.py:98
+msgid "Invoice Payment"
+msgstr "Zahlung auf Rechnung"
+
+#: pretix_secuconnect/payment.py:105
+msgid "Prepayment"
+msgstr "Vorkasse"
+
+#: pretix_secuconnect/payment.py:112 pretix_secuconnect/payment.py:585
+msgid "PayPal"
+msgstr "PayPal"
+
+#: pretix_secuconnect/payment.py:119
+msgid "Sofort"
+msgstr "Sofortüberweisung"
+
+#: pretix_secuconnect/payment.py:126
+msgid "giropay"
+msgstr "giropay"
+
+#: pretix_secuconnect/payment.py:133
+msgid "eps"
+msgstr "EPS"
+
+#: pretix_secuconnect/payment.py:302 pretix_secuconnect/payment.py:309
+#: pretix_secuconnect/payment.py:444 pretix_secuconnect/payment.py:452
+#: pretix_secuconnect/views.py:112
+msgid ""
+"We had trouble communicating with secuconnect. Please try again and get in "
+"touch with us if this problem persists."
+msgstr ""
+"Bei der Kommunikation mit secuconnect ist ein Problem aufgetreten. Bitte "
+"versuchen Sie es erneut und setzen Sie sich mit uns in Verbindung, wenn das "
+"Problem fortbesteht."
+
+#: pretix_secuconnect/payment.py:320
+msgid ""
+"The secuconnect plugin is operating in test mode. No money will actually be "
+"transferred."
+msgstr ""
+"Das secuconnect-Modul arbeitet im Testmodus. Kein echtes Geld wird "
+"transferiert."
+
+#: pretix_secuconnect/payment.py:406
+#, python-brace-format
+msgid "Order {order} for {event}"
+msgstr "Bestellung {order} für {event}"
+
+#: pretix_secuconnect/payment.py:466
+msgid ""
+"Requested payment method not supported. Please get in touch with us if this "
+"problem persists."
+msgstr ""
+"Die angeforderte Zahlungsmethode wird nicht unterstützt. Bitte setzen Sie "
+"sich mit uns in Verbindung, wenn das Problem fortbesteht."
+
+#: pretix_secuconnect/payment.py:508
+msgid "Credit card via secuconnect"
+msgstr "Kreditkarte über secuconnect"
+
+#: pretix_secuconnect/payment.py:509
+msgid "Credit card"
+msgstr "Kreditkarte"
+
+#: pretix_secuconnect/payment.py:514
+msgid "SEPA Direct Debit via secuconnect"
+msgstr "SEPA-Lastschrift über secuconnect"
+
+#: pretix_secuconnect/payment.py:527
+msgid "Bank transfer via secuconnect"
+msgstr "Banküberweisung über secuconnect"
+
+#: pretix_secuconnect/payment.py:528
+msgid "Bank transfer"
+msgstr "Banküberweisung"
+
+#: pretix_secuconnect/payment.py:533
+msgid "SOFORT via secuconnect"
+msgstr "Sofortüberweisung über secuconnect"
+
+#: pretix_secuconnect/payment.py:534
+msgid "SOFORT"
+msgstr "Sofortüberweisung"
+
+#: pretix_secuconnect/payment.py:545
+msgid "easycredit via secuconnect"
+msgstr "easycredit über secuconnect"
+
+#: pretix_secuconnect/payment.py:546
+msgid "easycredit"
+msgstr "easycredit"
+
+#: pretix_secuconnect/payment.py:559
+msgid "EPS via secuconnect"
+msgstr "EPS über secuconnect"
+
+#: pretix_secuconnect/payment.py:560
+msgid "EPS"
+msgstr "EPS"
+
+#: pretix_secuconnect/payment.py:565
+msgid "GiroPay via secuconnect"
+msgstr "giropay über secuconnect"
+
+#: pretix_secuconnect/payment.py:566
+msgid "GiroPay"
+msgstr "giropay"
+
+#: pretix_secuconnect/payment.py:571
+msgid "Invoice via secuconnect"
+msgstr "Rechnung über secuconnect"
+
+#: pretix_secuconnect/payment.py:572
+msgid "Invoice"
+msgstr "Rechnung"
+
+#: pretix_secuconnect/payment.py:584
+msgid "PayPal via secuconnect"
+msgstr "PayPal über secuconnect"
+
+#: pretix_secuconnect/signals.py:38
+msgid "secuconnect reported a status update: {}"
+msgstr "secuconnect hat einen Status gemeldet: {}"
+
+#: pretix_secuconnect/templates/pretix_secuconnect/checkout_payment_confirm.html:3
+#: pretix_secuconnect/templates/pretix_secuconnect/checkout_payment_form.html:3
+msgid ""
+"After you submitted your order, we will redirect you to secuconnect to "
+"complete your payment. You will then be redirected back here to get your "
+"tickets."
+msgstr ""
+"Nach Abschluss deiner Bestellung leiten wir Sie zu secuconnect weiter um "
+"die Zahlung abzuschließen. Danach werden Sie wieder zurück zu diesem Shop "
+"geleitet."
+
+#: pretix_secuconnect/templates/pretix_secuconnect/checkout_payment_confirm.html:8
+msgid "Payment method"
+msgstr "Zahlungsmethode"
+
+#: pretix_secuconnect/templates/pretix_secuconnect/control.html:5
+msgid "ID"
+msgstr "ID"
+
+#: pretix_secuconnect/templates/pretix_secuconnect/control.html:7
+msgid "Status"
+msgstr "Status"
+
+#: pretix_secuconnect/templates/pretix_secuconnect/control.html:9
+msgid "Payment Method"
+msgstr "Zahlungsmethode"
+
+#: pretix_secuconnect/templates/pretix_secuconnect/control.html:11
+msgid "Payment Data"
+msgstr "Zahlungsdaten"
+
+#: pretix_secuconnect/templates/pretix_secuconnect/control.html:13
+msgid "Payment Transaction Status"
+msgstr "Zahlungstransaktionsstatus"
+
+#: pretix_secuconnect/templates/pretix_secuconnect/control.html:15
+msgid "Payment Transaction ID"
+msgstr "Zahlungstransaktions-ID"
+
+#: pretix_secuconnect/templates/pretix_secuconnect/pending.html:10
+msgid "Please transfer the full amount to the following bank account:"
+msgstr "Bitte überweisen Sie den vollen Betrag auf das folgende Bankkonto:"
+
+#: pretix_secuconnect/templates/pretix_secuconnect/pending.html:17
+msgid "Account holder"
+msgstr "Kontoinhaber"
+
+#: pretix_secuconnect/templates/pretix_secuconnect/pending.html:18
+msgid "IBAN"
+msgstr "IBAN"
+
+#: pretix_secuconnect/templates/pretix_secuconnect/pending.html:19
+msgid "BIC"
+msgstr "BIC"
+
+#: pretix_secuconnect/templates/pretix_secuconnect/pending.html:20
+msgid "Bank name"
+msgstr "Name der Bank"
+
+#: pretix_secuconnect/templates/pretix_secuconnect/pending.html:21
+msgid "Amount:"
+msgstr "Betrag:"
+
+#: pretix_secuconnect/templates/pretix_secuconnect/pending.html:22
+msgid "Reference code (important):"
+msgstr "Verwendungszweck (wichtig):"
+
+#: pretix_secuconnect/templates/pretix_secuconnect/pending.html:25
+msgid ""
+"After you sent the bank transfer, you can close this window. We will send "
+"you an email as soon as we received your payment."
+msgstr ""
+"Nachdem Sie die Banküberweisung ausgeführt haben, können Sie dieses Fenster "
+"schließen. Wir schicken Ihnen eine E-Mail, sobald wir Ihre Zahlung erhalten "
+"haben."
+
+#: pretix_secuconnect/templates/pretix_secuconnect/pending.html:36
+#: pretix_secuconnect/templates/pretix_secuconnect/pending.html:56
+msgid "Scan the qr-code with your banking app"
+msgstr "Scannen Sie den QR-Code mit Ihrer Banking-App"
+
+#: pretix_secuconnect/templates/pretix_secuconnect/pending.html:59
+msgid "Open BezahlCode in your banking app to start the payment process."
+msgstr "BezahlCode in Banking-App öffnen um den Zahlungsvorgang zu starten."
+
+#: pretix_secuconnect/templates/pretix_secuconnect/pending.html:68
+msgid ""
+"We're waiting for an answer from the payment provider regarding your "
+"payment. Please contact us if this takes more than a few days."
+msgstr ""
+"Wir warten auf eine Antwort des Zahlungsdienstleisters bezüglich Ihrer "
+"Zahlung. Bitte kontaktieren Sie uns, falls dies mehr als ein paar Tage "
+"dauert."
+
+#: pretix_secuconnect/templates/pretix_secuconnect/pending.html:74
+msgid ""
+"The payment transaction could not be completed for the following reason:"
+msgstr "Die Zahlung konnte aus folgendem Grund nicht abgeschlossen werden:"
+
+#: pretix_secuconnect/templates/pretix_secuconnect/pending.html:81
+msgid "Unknown reason"
+msgstr "Unbekannter Grund"
+
+#: pretix_secuconnect/templates/pretix_secuconnect/redirect.html:17
+msgid "The payment process has started in a new window."
+msgstr "Der Zahlungsvorgang wird in einem neuen Fenster fortgesetzt."
+
+#: pretix_secuconnect/templates/pretix_secuconnect/redirect.html:20
+msgid "The window to enter your payment data was not opened or was closed?"
+msgstr ""
+"Das Fenster zur Eingabe der Zahlungsdaten wurde geschlossen oder nie "
+"geöffnet?"
+
+#: pretix_secuconnect/templates/pretix_secuconnect/redirect.html:25
+msgid "Click here in order to open the window."
+msgstr "Hier klicken um das Fenster zu öffnen."
+
+#: pretix_secuconnect/views.py:160
+msgid ""
+"Sorry, there was an error in the payment process. Please check the link in "
+"your emails to continue."
+msgstr ""
+"Entschuldigen Sie bitte, es gab einen Fehler im Bezahlvorgang. Bitte "
+"klicken Sie auf den Link in der E-Mail, die wir Ihnen geschickt haben, um "
+"fortzufahren."

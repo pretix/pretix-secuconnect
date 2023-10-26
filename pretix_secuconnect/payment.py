@@ -412,6 +412,8 @@ class SecuconnectMethod(BasePaymentProvider):
                     }
                 ]
             },
+            "merchantRef": f"{self.event.slug.upper()}-{payment.full_id}",
+            "transactionRef": f"{self.event.slug.upper()}-{payment.full_id}",
             "basket_info": {
                 "sum": self._decimal_to_int(payment.amount),
                 "currency": self.event.currency,

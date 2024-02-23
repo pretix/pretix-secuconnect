@@ -480,8 +480,8 @@ class SecuconnectMethod(BasePaymentProvider):
                     {
                         "url": url,
                         "session": {
-                            "payment_saferpay_order_secret": request.session[
-                                "payment_saferpay_order_secret"
+                            "payment_secuconnect_order_secret": request.session[
+                                "payment_secuconnect_order_secret"
                             ],
                         },
                     },

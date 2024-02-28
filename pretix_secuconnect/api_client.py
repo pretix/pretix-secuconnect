@@ -128,7 +128,7 @@ class SecuconnectAPIClient:
                 k: v if k in ("id", "object") else "█"
                 for (k, v) in transaction_data["customer"].items()
             }
-        except (TypeError, KeyError):
+        except (TypeError, KeyError, AttributeError):
             pass
         return transaction_data
 

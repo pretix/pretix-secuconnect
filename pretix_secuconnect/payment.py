@@ -256,7 +256,7 @@ class SecuconnectMethod(BasePaymentProvider):
         return {
             "id": payment_info.get("smart_transaction", {}).get("id"),
             "status": (
-                payment_info.get("payment_transaction", {})
+                (payment_info.get("payment_transaction", {}) or {})
                 .get("details", {})
                 .get("status_simple_text")
                 or payment_info.get("smart_transaction", {}).get("status")
@@ -273,7 +273,7 @@ class SecuconnectMethod(BasePaymentProvider):
             "payment_transaction_status_string": payment_info.get(
                 "payment_transaction", {}
             ).get("status_text"),
-            "payment_transaction_id": payment_info.get("payment_transaction", {}).get(
+            "payment_transaction_id": (payment_info.get("payment_transaction", {}) or {}).get(
                 "id"
             ),
         }

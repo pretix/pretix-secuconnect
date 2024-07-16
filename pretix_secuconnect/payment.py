@@ -270,12 +270,12 @@ class SecuconnectMethod(BasePaymentProvider):
             "payment_context": payment_info.get("smart_transaction", {}).get(
                 "payment_context"
             ),
-            "payment_transaction_status_string": payment_info.get(
-                "payment_transaction", {}
+            "payment_transaction_status_string": (
+                payment_info.get("payment_transaction", {}) or {}
             ).get("status_text"),
-            "payment_transaction_id": (payment_info.get("payment_transaction", {}) or {}).get(
-                "id"
-            ),
+            "payment_transaction_id": (
+                payment_info.get("payment_transaction", {}) or {}
+            ).get("id"),
         }
 
     def execute_refund(self, refund: OrderRefund):

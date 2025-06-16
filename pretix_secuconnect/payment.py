@@ -120,13 +120,14 @@ class SecuconnectSettingsHolder(BasePaymentProvider):
                         required=False,
                     ),
                 ),
-                (
-                    "method_giropay",
-                    forms.BooleanField(
-                        label=_("giropay"),
-                        required=False,
-                    ),
-                ),
+                # Giropay has been retired as such it is not offered as a setting anymore.
+                # (
+                #     "method_giropay",
+                #     forms.BooleanField(
+                #         label=_("giropay"),
+                #         required=False,
+                #     ),
+                # ),
                 (
                     "method_eps",
                     forms.BooleanField(
@@ -563,6 +564,14 @@ class SecuconnectGiropay(SecuconnectMethod):
     method = "giropay"
     verbose_name = _("GiroPay via secuconnect")
     public_name = _("GiroPay")
+
+    def is_allowed(self, request: HttpRequest, total: Decimal = None) -> bool:
+        # giropay has shut down
+        return False
+
+    def order_change_allowed(self, order: Order, request: HttpRequest = None) -> bool:
+        # giropay has shut down
+        return False
 
 
 class SecuconnectInvoice(SecuconnectMethod):

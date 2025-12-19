@@ -38,6 +38,7 @@ class PaymentStatusSimple(Enum):
     """The transaction used to authorise further payments has been declined."""
     ON_HOLD = 13
     WAITING_FOR_SHIPMENT = 14
+    UNKNOWN = 99
 
 
 class SecuconnectAPIClient:

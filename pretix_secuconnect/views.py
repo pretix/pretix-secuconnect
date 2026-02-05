@@ -191,7 +191,11 @@ class WebhookView(SecuconnectOrderView, View):
         transaction = self.pprov.client.fetch_payment_transaction_info(id)
 
         info = self.payment.info_data
-        status = PaymentStatusSimple(transaction["details"]["status_simple"])
+        status_raw = transaction["details"]["status_simple"]
+        if status_raw is None:
+            status = PaymentStatusSimple.UNKNOWN
+        else:
+            status = PaymentStatusSimple(transaction["details"]["status_simple"])
         if info["payment_transaction"]:
             old_status = PaymentStatusSimple(
                 info["payment_transaction"]["details"]["status_simple"]

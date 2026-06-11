@@ -36,6 +36,7 @@ class SecuconnectSettingsHolder(BasePaymentProvider):
     @property
     def settings_form_fields(self):
         fields = [
+            # Global
             (
                 "environment",
                 forms.ChoiceField(
@@ -48,95 +49,23 @@ class SecuconnectSettingsHolder(BasePaymentProvider):
                     ),
                 ),
             ),
-            (
-                "is_demo",
-                forms.BooleanField(
-                    label=_("Demo Mode"),
-                    required=False,
-                ),
-            ),
-            (
-                "client_id",
-                forms.CharField(
-                    label=_("OAuth Client ID"),
-                ),
-            ),
-            (
-                "client_secret",
-                SecretKeySettingsField(
-                    label=_("OAuth Client Secret"),
-                ),
-            ),
-            (
-                "contract_id",
-                forms.CharField(
-                    label=_("Merchant Contract ID"),
-                ),
-            ),
+            ("is_demo", forms.BooleanField(label=_("Demo Mode"), required=False)),
+            ("client_id", forms.CharField(label=_("OAuth Client ID"))),
+            ("client_secret", SecretKeySettingsField(label=_("OAuth Client Secret"))),
+            ("contract_id", forms.CharField(label=_("Merchant Contract ID"))),
+            #
+            # Payment methods
+            ("method_creditcard", forms.BooleanField(label=_("Credit Card"), required=False)),
+            ("method_debit", forms.BooleanField(label=_("SEPA Direct Debit"), required=False)),
+            ("method_invoice", forms.BooleanField(label=_("Invoice Payment"), required=False)),
+            ("method_prepaid", forms.BooleanField(label=_("Prepayment"), required=False)),
+            ("method_paypal", forms.BooleanField(label=_("PayPal"), required=False)),
+            ("method_sofort", forms.BooleanField(label=_("Sofort"), required=False)),
+            # Giropay has been retired as such it is not offered as a setting anymore.
+            # ("method_giropay", forms.BooleanField(label=_("giropay"), required=False)),
+            ("method_eps", forms.BooleanField(label=_("eps"), required=False)),
         ]
-        d = OrderedDict(
-            fields
-            + [
-                (
-                    "method_creditcard",
-                    forms.BooleanField(
-                        label=_("Credit Card"),
-                        required=False,
-                    ),
-                ),
-                (
-                    "method_debit",
-                    forms.BooleanField(
-                        label=_("SEPA Direct Debit"),
-                        required=False,
-                    ),
-                ),
-                (
-                    "method_invoice",
-                    forms.BooleanField(
-                        label=_("Invoice Payment"),
-                        required=False,
-                    ),
-                ),
-                (
-                    "method_prepaid",
-                    forms.BooleanField(
-                        label=_("Prepayment"),
-                        required=False,
-                    ),
-                ),
-                (
-                    "method_paypal",
-                    forms.BooleanField(
-                        label=_("PayPal"),
-                        required=False,
-                    ),
-                ),
-                (
-                    "method_sofort",
-                    forms.BooleanField(
-                        label=_("Sofort"),
-                        required=False,
-                    ),
-                ),
-                # Giropay has been retired as such it is not offered as a setting anymore.
-                # (
-                #     "method_giropay",
-                #     forms.BooleanField(
-                #         label=_("giropay"),
-                #         required=False,
-                #     ),
-                # ),
-                (
-                    "method_eps",
-                    forms.BooleanField(
-                        label=_("eps"),
-                        required=False,
-                    ),
-                ),
-            ]
-            + list(super().settings_form_fields.items())
-        )
+        d = OrderedDict(fields + list(super().settings_form_fields.items()))
         d.move_to_end("_enabled", last=False)
         return d
 
@@ -194,16 +123,12 @@ class SecuconnectMethod(BasePaymentProvider):
     def payment_is_valid_session(self, request: HttpRequest):
         return True
 
-    def payment_form_render(
-        self, request: HttpRequest, total: Decimal, order: Order = None
-    ) -> str:
+    def payment_form_render(self, request: HttpRequest, total: Decimal, order: Order = None) -> str:
         template = get_template("pretix_secuconnect/checkout_payment_form.html")
         ctx = {"request": request, "event": self.event, "settings": self.settings}
         return template.render(ctx)
 
-    def checkout_confirm_render(
-        self, request: HttpRequest, order: Order = None, info_data: dict = None
-    ) -> str:
+    def checkout_confirm_render(self, request: HttpRequest, order: Order = None, info_data: dict = None) -> str:
         template = get_template("pretix_secuconnect/checkout_payment_confirm.html")
         ctx = {
             "request": request,
@@ -234,9 +159,7 @@ class SecuconnectMethod(BasePaymentProvider):
         if payment.info:
             payment_info = json.loads(payment.info)
             if "amount" in payment_info:
-                payment_info["amount"] /= 10 ** settings.CURRENCY_PLACES.get(
-                    self.event.currency, 2
-                )
+                payment_info["amount"] /= 10 ** settings.CURRENCY_PLACES.get(self.event.currency, 2)
         else:
             payment_info = None
         template = get_template("pretix_secuconnect/control.html")
@@ -256,26 +179,14 @@ class SecuconnectMethod(BasePaymentProvider):
         return {
             "id": payment_info.get("smart_transaction", {}).get("id"),
             "status": (
-                (payment_info.get("payment_transaction", {}) or {})
-                .get("details", {})
-                .get("status_simple_text")
+                (payment_info.get("payment_transaction", {}) or {}).get("details", {}).get("status_simple_text")
                 or payment_info.get("smart_transaction", {}).get("status")
             ),
-            "payment_method": payment_info.get("smart_transaction", {}).get(
-                "payment_method"
-            ),
-            "payment_instructions": payment_info.get("smart_transaction", {}).get(
-                "payment_instructions"
-            ),
-            "payment_context": payment_info.get("smart_transaction", {}).get(
-                "payment_context"
-            ),
-            "payment_transaction_status_string": (
-                payment_info.get("payment_transaction", {}) or {}
-            ).get("status_text"),
-            "payment_transaction_id": (
-                payment_info.get("payment_transaction", {}) or {}
-            ).get("id"),
+            "payment_method": payment_info.get("smart_transaction", {}).get("payment_method"),
+            "payment_instructions": payment_info.get("smart_transaction", {}).get("payment_instructions"),
+            "payment_context": payment_info.get("smart_transaction", {}).get("payment_context"),
+            "payment_transaction_status_string": (payment_info.get("payment_transaction", {}) or {}).get("status_text"),
+            "payment_transaction_id": (payment_info.get("payment_transaction", {}) or {}).get("id"),
         }
 
     def execute_refund(self, refund: OrderRefund):
@@ -313,17 +224,13 @@ class SecuconnectMethod(BasePaymentProvider):
     @property
     def test_mode_message(self):
         if self.is_test_mode:
-            return _(
-                "The secuconnect plugin is operating in test mode. No money will actually be transferred."
-            )
+            return _("The secuconnect plugin is operating in test mode. No money will actually be transferred.")
         return None
 
     @property
     def is_test_mode(self):
         return (
-            self.settings.environment == "testing"
-            or self.settings.environment == "showcase"
-            or self.settings.is_demo
+            self.settings.environment == "testing" or self.settings.environment == "showcase" or self.settings.is_demo
         )
 
     def amount_to_decimal(self, cents):
@@ -397,17 +304,17 @@ class SecuconnectMethod(BasePaymentProvider):
             "customer": {"contact": customer} if customer else {},
             "intent": "sale",
             "basket": {
-                "products": [
-                    {
-                        "id": 1,
-                        "desc": gettext("Order {order} for {event}").format(
+                "products": [{
+                    "id": 1,
+                    "desc": (
+                        gettext("Order {order} for {event}").format(
                             event=payment.order.event.name, order=payment.order.code
-                        ),
-                        "priceOne": self._decimal_to_int(payment.amount),
-                        "quantity": 1,
-                        "tax": 0,
-                    }
-                ]
+                        )
+                    ),
+                    "priceOne": self._decimal_to_int(payment.amount),
+                    "quantity": 1,
+                    "tax": 0,
+                }]
             },
             "merchantRef": f"{self.event.slug.upper()}-{payment.full_id}",
             "transactionRef": f"{self.event.slug.upper()}-{payment.full_id}",
@@ -433,9 +340,7 @@ class SecuconnectMethod(BasePaymentProvider):
 
     def execute_payment(self, request: HttpRequest, payment: OrderPayment):
         try:
-            data = self.client.start_smart_transaction(
-                self._build_smart_transaction_init_body(payment)
-            )
+            data = self.client.start_smart_transaction(self._build_smart_transaction_init_body(payment))
         except SecuconnectException as ex:
             payment.fail(log_data=ex.error_object)
             raise PaymentException(
@@ -461,10 +366,7 @@ class SecuconnectMethod(BasePaymentProvider):
             redirect_url = data["payment_links"][self.method]
         except KeyError:
             raise PaymentException(
-                _(
-                    "Requested payment method not supported. Please get in touch "
-                    "with us if this problem persists."
-                )
+                _("Requested payment method not supported. Please get in touch " "with us if this problem persists.")
             )
         return self.redirect(request, redirect_url)
 
@@ -477,9 +379,7 @@ class SecuconnectMethod(BasePaymentProvider):
                     {
                         "url": url,
                         "session": {
-                            "payment_secuconnect_order_secret": request.session[
-                                "payment_secuconnect_order_secret"
-                            ],
+                            "payment_secuconnect_order_secret": request.session["payment_secuconnect_order_secret"],
                         },
                     },
                     salt="safe-redirect",

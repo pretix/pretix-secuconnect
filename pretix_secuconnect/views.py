@@ -1,4 +1,3 @@
-import hashlib
 import json
 import logging
 import urllib
@@ -53,22 +52,13 @@ def redirect_view(request: HttpRequest, *args, **kwargs):
 
 class SecuconnectOrderView:
     def dispatch(self, request: HttpRequest, *args, **kwargs):
+        url = request.resolver_match
         try:
-            self.order = request.event.orders.get(code=kwargs["order"])
-            if (
-                hashlib.sha1(self.order.secret.lower().encode()).hexdigest()
-                != kwargs["hash"].lower()
-            ):
-                raise Http404("")
+            self.order = request.event.orders.get_with_secret_check(
+                code=kwargs["order"], received_secret=kwargs["hash"], tag=f"{url.namespace}:{url.url_name}"
+            )
         except Order.DoesNotExist:
-            # Do a hash comparison as well to harden timing attacks
-            if (
-                "abcdefghijklmnopq".lower()
-                == hashlib.sha1("abcdefghijklmnopq".encode()).hexdigest()
-            ):
-                raise Http404("")
-            else:
-                raise Http404("")
+            raise Http404("")
         return super().dispatch(request, *args, **kwargs)
 
     @cached_property

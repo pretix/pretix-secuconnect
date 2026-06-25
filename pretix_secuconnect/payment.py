@@ -1,6 +1,5 @@
 from typing import Union
 
-import hashlib
 import json
 import logging
 from collections import OrderedDict
@@ -342,7 +341,7 @@ class SecuconnectMethod(BasePaymentProvider):
             kwargs={
                 "order": payment.order.code,
                 "payment": payment.pk,
-                "hash": hashlib.sha1(payment.order.secret.lower().encode()).hexdigest(),
+                "hash": payment.order.tagged_secret("plugins:pretix_secuconnect:" + type),
                 "action": status,
             },
         )

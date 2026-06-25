@@ -74,17 +74,13 @@ class SecuconnectAPIClient:
                     error_object = r.json()
                 except:  # noqa
                     error_object = {"exception": str(e)}
-                logger.exception(
-                    "Failed to retrieve secuconnect access token (%r)", error_object
-                )
+                logger.exception("Failed to retrieve secuconnect access token (%r)", error_object)
                 raise
 
             response = r.json()
             logger.debug("Response %r", response)
             token = response["access_token"]
-            self.cache.set(
-                "payment_secuconnect_auth_token", token, response["expires_in"]
-            )
+            self.cache.set("payment_secuconnect_auth_token", token, response["expires_in"])
         return token
 
     def _post(self, endpoint, *args, **kwargs):
@@ -115,10 +111,7 @@ class SecuconnectAPIClient:
             except:  # noqa
                 error_object = {"exception": str(e)}
             logger.exception("secuconnect API returned error (%r)", error_object)
-            if (
-                error_object.get("status") == "error"
-                and "error_details" in error_object
-            ):
+            if error_object.get("status") == "error" and "error_details" in error_object:
                 raise SecuconnectException(error_object)
 
             raise
@@ -126,27 +119,20 @@ class SecuconnectAPIClient:
     def _scrub_customer_data(self, transaction_data):
         try:
             transaction_data["customer"] = {
-                k: v if k in ("id", "object") else "█"
-                for (k, v) in transaction_data["customer"].items()
+                k: v if k in ("id", "object") else "█" for (k, v) in transaction_data["customer"].items()
             }
         except (TypeError, KeyError, AttributeError):
             pass
         return transaction_data
 
     def fetch_smart_transaction_info(self, transaction_id):
-        return self._scrub_customer_data(
-            self._get("v2/Smart/Transactions/{}".format(transaction_id))
-        )
+        return self._scrub_customer_data(self._get("v2/Smart/Transactions/{}".format(transaction_id)))
 
     def fetch_payment_transaction_info(self, transaction_id):
-        return self._scrub_customer_data(
-            self._get("v2/Payment/Transactions/{}".format(transaction_id))
-        )
+        return self._scrub_customer_data(self._get("v2/Payment/Transactions/{}".format(transaction_id)))
 
     def fetch_payment_transaction_status(self, transaction_id):
-        return self._get(
-            "v2/Payment/Transactions/{}/checkStatus".format(transaction_id)
-        )
+        return self._get("v2/Payment/Transactions/{}/checkStatus".format(transaction_id))
 
     def start_smart_transaction(self, body):
         return self._scrub_customer_data(self._post("v2/Smart/Transactions", json=body))
@@ -160,13 +146,9 @@ class SecuconnectAPIClient:
             )
         ]
 
-    def set_payment_transaction_status_for_test(
-        self, transaction_id, method, new_status
-    ):
+    def set_payment_transaction_status_for_test(self, transaction_id, method, new_status):
         return self._post(
-            "v2/Payment/Secupay{}/{}/TestChangedPaymentStatus".format(
-                method, transaction_id
-            ),
+            "v2/Payment/Secupay{}/{}/TestChangedPaymentStatus".format(method, transaction_id),
             json={"new_status_id": new_status},
         )
 

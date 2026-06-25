@@ -40,3 +40,22 @@ version = {attr = "pretix_secuconnect.__version__"}
 [tool.setuptools.packages.find]
 include = ["pretix*"]
 namespaces = false
+
+[tool.black]
+line-length = 120
+preview = true
+enable-unstable-feature = ["hug_parens_with_braces_and_square_brackets"]
+
+[tool.isort]
+profile = "black"
+combine_as_imports = true
+default_section = "THIRDPARTY"
+include_trailing_comma = true
+known_third_party = "pretix"
+known_standard_library = "typing"
+skip = "setup.py"
+use_parentheses = true
+force_grid_wrap = 0
+line_length = 120
+known_first_party = "pretix_secuconnect"
+

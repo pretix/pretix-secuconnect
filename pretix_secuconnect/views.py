@@ -35,17 +35,9 @@ def redirect_view(request: HttpRequest, *args, **kwargs):
     else:
         params = request.GET.copy()
         params["go"] = "1"
-        r = render(
-            request,
-            "pretix_secuconnect/redirect.html",
-            {
-                "url": build_absolute_uri(
-                    request.event, "plugins:pretix_secuconnect:redirect"
-                )
-                + "?"
-                + urllib.parse.urlencode(params),
-            },
-        )
+        redir_url = build_absolute_uri(request.event, "plugins:pretix_secuconnect:redirect")
+        redir_url += "?" + urllib.parse.urlencode(params)
+        r = render(request, "pretix_secuconnect/redirect.html", {"url": redir_url})
         r._csp_ignore = True
         return r
 
@@ -86,9 +78,7 @@ class ReturnView(SecuconnectOrderView, View):
             return self._redirect_to_order()
 
         try:
-            smart_transaction = self.pprov.client.fetch_smart_transaction_info(
-                transaction_id
-            )
+            smart_transaction = self.pprov.client.fetch_smart_transaction_info(transaction_id)
             info["smart_transaction"] = smart_transaction
             if smart_transaction["transactions"]:
                 payment_transaction = self.pprov.client.fetch_payment_transaction_info(
@@ -140,10 +130,7 @@ class ReturnView(SecuconnectOrderView, View):
 
     def _redirect_to_order(self):
         self.order.refresh_from_db()
-        if (
-            self.request.session.get("payment_secuconnect_order_secret")
-            != self.order.secret
-        ):
+        if self.request.session.get("payment_secuconnect_order_secret") != self.order.secret:
             messages.error(
                 self.request,
                 _(
@@ -187,18 +174,14 @@ class WebhookView(SecuconnectOrderView, View):
         else:
             status = PaymentStatusSimple(transaction["details"]["status_simple"])
         if info["payment_transaction"]:
-            old_status = PaymentStatusSimple(
-                info["payment_transaction"]["details"]["status_simple"]
-            )
+            old_status = PaymentStatusSimple(info["payment_transaction"]["details"]["status_simple"])
         else:
             old_status = None
         info["payment_transaction"] = transaction
         logging.info("%s: Transaction status update (%s -> %s)", id, old_status, status)
 
         if old_status == status:
-            logging.info(
-                "%s: Transaction status update already processed, ignoring", id
-            )
+            logging.info("%s: Transaction status update already processed, ignoring", id)
         else:
             if status == PaymentStatusSimple.ACCEPTED:
                 self.payment.info_data = info
@@ -206,10 +189,7 @@ class WebhookView(SecuconnectOrderView, View):
                     self.payment.confirm()
                 except Quota.QuotaExceededException:
                     pass
-            elif (
-                status == PaymentStatusSimple.PENDING
-                and self.payment.state == OrderPayment.PAYMENT_STATE_CREATED
-            ):
+            elif status == PaymentStatusSimple.PENDING and self.payment.state == OrderPayment.PAYMENT_STATE_CREATED:
                 self.payment.info_data = info
                 self.payment.state = OrderPayment.PAYMENT_STATE_PENDING
                 self.payment.save(update_fields=["state", "info"])
@@ -228,20 +208,14 @@ class WebhookView(SecuconnectOrderView, View):
                 and self.payment.state == OrderPayment.PAYMENT_STATE_CONFIRMED
             ):
                 payment_status = self.pprov.client.fetch_payment_transaction_status(id)
-                remaining_amount = self.pprov.amount_to_decimal(
-                    payment_status["amount"]
-                )
+                remaining_amount = self.pprov.amount_to_decimal(payment_status["amount"])
                 if remaining_amount < self.payment.amount:
                     self.payment.create_external_refund(
                         info=json.dumps(transaction),
                         amount=self.payment.amount - remaining_amount,
                     )
             else:
-                logger.warning(
-                    "%s: Unexpected payment state '%r' reported by secuconnect",
-                    id,
-                    transaction["details"],
-                )
+                logger.warning("%s: Unexpected payment state '%r' reported by secuconnect", id, transaction["details"])
                 self.payment.info_data = info
                 self.payment.save(update_fields=["state", "info"])
 
@@ -255,18 +229,11 @@ class WebhookView(SecuconnectOrderView, View):
             )
 
         if transaction.get("related_transactions"):
-            known_refunds = {
-                r.info_data.get("id"): r for r in self.payment.refunds.all()
-            }
+            known_refunds = {r.info_data.get("id"): r for r in self.payment.refunds.all()}
             for related_ref in transaction["related_transactions"]:
-                if (
-                    related_ref["object"] == "payment.transactions"
-                    and related_ref["hierarchy"] == "child"
-                ):
+                if related_ref["object"] == "payment.transactions" and related_ref["hierarchy"] == "child":
                     if related_ref["id"] not in known_refunds:
-                        related = self.pprov.client.fetch_payment_transaction_info(
-                            related_ref["id"]
-                        )
+                        related = self.pprov.client.fetch_payment_transaction_info(related_ref["id"])
                         self.payment.create_external_refund(
                             amount=abs(self.pprov.amount_to_decimal(related["amount"])),
                             info=json.dumps(related),

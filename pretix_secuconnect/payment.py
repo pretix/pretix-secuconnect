@@ -482,7 +482,7 @@ class SecuconnectMethod(BasePaymentProvider):
                             ],
                         },
                     },
-                    salt="safe-redirect",
+                    salt="plugins:secuconnect:redirect:safe-redirect-data",
                 )
             )
         else:

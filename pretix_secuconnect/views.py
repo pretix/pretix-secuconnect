@@ -59,7 +59,9 @@ class SecuconnectOrderView:
         url = request.resolver_match
         try:
             self.order = request.event.orders.get_with_secret_check(
-                code=kwargs["order"], received_secret=kwargs["hash"], tag=f"{url.namespace}:{url.url_name}"
+                code=kwargs["order"],
+                received_secret=kwargs["hash"],
+                tag=f"{url.namespace}:{url.url_name}",
             )
         except Order.DoesNotExist:
             raise Http404("")

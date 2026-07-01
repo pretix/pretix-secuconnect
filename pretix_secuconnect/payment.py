@@ -341,7 +341,9 @@ class SecuconnectMethod(BasePaymentProvider):
             kwargs={
                 "order": payment.order.code,
                 "payment": payment.pk,
-                "hash": payment.order.tagged_secret("plugins:pretix_secuconnect:" + type),
+                "hash": payment.order.tagged_secret(
+                    "plugins:pretix_secuconnect:" + type
+                ),
                 "action": status,
             },
         )
